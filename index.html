@@ -1,169 +1,134 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080b16">
 <title>Aslam AI Movie Dubbing Studio</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#080b16;color:#f5f7ff;font-family:Arial,sans-serif}
-header{padding:20px 5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #252b40;background:#0d1222}
-.logo{font-size:21px;font-weight:800;color:#fff}
-.logo span{color:#9c7cff}
-.tag{font-size:11px;color:#b9a8ff;border:1px solid #51417c;padding:7px 10px;border-radius:20px}
-main{max-width:1100px;margin:auto;padding:30px 18px}
-.hero{text-align:center;padding:35px 10px}
-.hero h1{font-size:clamp(28px,5vw,48px);margin:0 0 12px}
-.hero h1 span{color:#a88aff}
-.hero p{color:#aab2c8;line-height:1.6}
-.panel{background:linear-gradient(145deg,#151c30,#101525);border:1px solid #29324b;border-radius:18px;padding:22px;margin:20px 0;box-shadow:0 15px 45px #0005}
-h2{font-size:19px;margin:0 0 18px}
-.upload{border:2px dashed #6855a7;border-radius:15px;padding:35px 15px;text-align:center;background:#17152a;cursor:pointer}
-.upload .symbol{font-size:42px}
-.upload h3{margin:12px 0 8px}
-.upload p{color:#aab2c8;font-size:13px;line-height:1.5}
-input[type=file]{display:none}
-button,.btn{border:0;border-radius:10px;padding:13px 18px;font-weight:bold;cursor:pointer;background:linear-gradient(100deg,#7655e8,#a65de8);color:white}
-button:disabled{opacity:.5;cursor:not-allowed}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-.field label{display:block;font-size:13px;color:#b9c1d5;margin-bottom:8px}
-select,input[type=text]{width:100%;padding:13px;background:#0c1222;color:white;border:1px solid #35405d;border-radius:9px}
-video{width:100%;max-height:400px;background:#000;border-radius:12px;margin-top:15px}
-.fileinfo{font-size:13px;color:#c2c9db;margin-top:10px;overflow-wrap:anywhere}
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.step{background:#10182b;border:1px solid #293550;border-radius:12px;padding:15px 10px;text-align:center}
-.step b{display:block;font-size:20px;color:#b39aff;margin-bottom:8px}
-.step small{color:#aab2c8;line-height:1.5}
-.note{font-size:13px;color:#aeb8ce;line-height:1.6}
-.status{padding:13px;border-radius:10px;background:#111a2c;color:#c8baff;font-size:13px;line-height:1.5;margin-top:15px}
-footer{text-align:center;color:#78839e;font-size:12px;padding:25px}
-@media(max-width:650px){.grid{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}header{padding:16px}.logo{font-size:16px}}
+body{
+ margin:0;padding:20px;background:#080d18;
+ color:white;font-family:Arial,sans-serif
+}
+.container{max-width:650px;margin:auto}
+h1{text-align:center;color:#45dcff}
+.subtitle{text-align:center;color:#aaa}
+.card{
+ background:#141e30;padding:20px;margin-top:20px;
+ border-radius:16px;border:1px solid #263751
+}
+.upload{
+ display:block;width:100%;padding:16px;
+ background:#08b9dc;color:#00111a;
+ border-radius:10px;text-align:center;
+ font-weight:bold;cursor:pointer
+}
+input[type=file]{
+ display:block;width:100%;padding:14px;
+ background:#25334a;color:white;
+ border-radius:10px;margin-top:12px;
+}
+select,button{
+ width:100%;padding:15px;margin-top:14px;
+ border:0;border-radius:10px;font-size:16px
+}
+select{background:#25334a;color:white}
+button{
+ background:#08b9dc;color:#00111a;
+ font-weight:bold
+}
+video{width:100%;margin-top:15px;border-radius:12px}
+.status{text-align:center;color:#49e6a5}
+.small{text-align:center;color:#aaa;font-size:13px}
 </style>
 </head>
 <body>
-<header>
- <div class="logo">ASLAM AI <span>MOVIE DUBBING STUDIO</span></div>
- <div class="tag">AI VIDEO PLATFORM</div>
-</header>
+<div class="container">
+<h1>🎬 ASLAM AI</h1>
+<p class="subtitle">Movie Dubbing Studio</p>
 
-<main>
-<section class="hero">
- <h1>Movies Without <span>Language Barriers</span></h1>
- <p>Multilingual AI Movie Dubbing • Voice Identity Matching • AI Lip-Sync</p>
-</section>
+<div class="card">
+<h2>📁 Upload Your Movie</h2>
+<p>Choose a video from your Android phone.</p>
 
-<section class="panel">
- <h2>01. Upload Your Movie</h2>
- <label class="upload" for="movie">
-  <div class="symbol">🎬</div>
-  <h3>Choose Your Movie or Video</h3>
-  <p>Tap here to upload MP4 or MOV video<br>Short clips and full movies supported by the planned processing system</p>
-  <span class="btn">Select Video</span>
- </label>
- <input id="movie" type="file" accept="video/mp4,video/quicktime,video/*">
- <div id="fileinfo" class="fileinfo">No video selected yet.</div>
- <video id="preview" controls playsinline hidden></video>
-</section>
+<label class="upload" for="videoFile">
+SELECT VIDEO FROM PHONE
+</label>
 
-<section class="panel">
- <h2>02. Select Languages</h2>
- <div class="grid">
-  <div class="field">
-   <label>Original Movie Language</label>
-   <select id="source">
-    <option value="auto">Auto Detect</option>
-    <option>Hindi</option><option>English</option><option>Arabic</option>
-    <option>Urdu</option><option>French</option><option>Spanish</option>
-    <option>German</option><option>Chinese</option><option>Japanese</option>
-    <option>Bengali</option><option>Turkish</option><option>Portuguese</option>
-   </select>
-  </div>
-  <div class="field">
-   <label>Dubbed Language</label>
-   <select id="target">
-    <option>Hindi</option><option>English</option><option>Arabic</option>
-    <option>Urdu</option><option>French</option><option>Spanish</option>
-    <option>German</option><option>Chinese</option><option>Japanese</option>
-    <option>Bengali</option><option>Turkish</option><option>Portuguese</option>
-   </select>
-  </div>
- </div>
-</section>
+<input
+ type="file"
+ id="videoFile"
+ accept="video/*"
+>
 
-<section class="panel">
- <h2>03. Voice & Character Settings</h2>
- <div class="field">
-  <label>Voice Processing Mode</label>
-  <select id="voice">
-   <option value="identity">Authorized Original Voice Identity Matching</option>
-   <option value="similar">Similar but Distinct AI Voice</option>
-  </select>
- </div>
- <p class="note">The planned system will extract clean dialogue samples from the uploaded movie, identify individual speakers and build character-wise voice profiles. Cloning a real actor's voice requires appropriate permission.</p>
-</section>
+<p id="fileName" class="status">No video selected</p>
 
-<section class="panel">
- <h2>04. Dubbing Features</h2>
- <div class="steps">
-  <div class="step"><b>🎙️</b><small>Dialogue & Voice Extraction</small></div>
-  <div class="step"><b>🌍</b><small>Translation & Dubbing</small></div>
-  <div class="step"><b>👄</b><small>AI Lip-Sync</small></div>
-  <div class="step"><b>💬</b><small>Subtitles & Audio Mix</small></div>
- </div>
- <div class="grid" style="margin-top:18px">
-  <div class="field">
-   <label>Subtitle Language</label>
-   <select id="subtitle">
-    <option>Same as Dubbed Language</option>
-    <option>Hindi</option><option>English</option><option>Arabic</option>
-    <option>Urdu</option><option>French</option><option>Spanish</option>
-   </select>
-  </div>
-  <div class="field">
-   <label>Video Quality</label>
-   <select id="quality">
-    <option>1080p HD</option><option>4K Ultra HD</option>
-    <option>720p HD</option>
-   </select>
-  </div>
- </div>
- <button id="start" style="width:100%;margin-top:20px" disabled>Start AI Movie Dubbing</button>
- <div id="status" class="status">Select a video to prepare your dubbing project.</div>
-</section>
-</main>
+<video id="preview" controls playsinline
+ style="display:none"></video>
+</div>
 
-<footer>© 2026 Aslam AI Movie Dubbing Studio · Multilingual Cinema Technology</footer>
+<div class="card">
+<h2>🌍 Dubbing Settings</h2>
+
+<label>Target Language</label>
+<select id="language">
+<option>Hindi</option>
+<option>English</option>
+<option>Arabic</option>
+<option>Urdu</option>
+<option>French</option>
+<option>Spanish</option>
+<option>German</option>
+<option>Chinese</option>
+<option>Japanese</option>
+<option>Bengali</option>
+<option>Turkish</option>
+<option>Portuguese</option>
+</select>
+
+<label>Video Quality</label>
+<select id="quality">
+<option>1080p HD</option>
+<option>4K Ultra HD</option>
+</select>
+
+<button type="button" id="startBtn">START DUBBING</button>
+<p class="small" id="message">
+AI processing backend is not connected yet.
+</p>
+</div>
+</div>
 
 <script>
-const movie=document.getElementById('movie');
-const preview=document.getElementById('preview');
-const fileinfo=document.getElementById('fileinfo');
-const start=document.getElementById('start');
-const statusBox=document.getElementById('status');
-let videoUrl=null;
+const input = document.getElementById("videoFile");
+const preview = document.getElementById("preview");
+const fileName = document.getElementById("fileName");
 
-movie.addEventListener('change',()=>{
- const file=movie.files[0];
- if(!file)return;
- if(videoUrl)URL.revokeObjectURL(videoUrl);
- videoUrl=URL.createObjectURL(file);
- preview.src=videoUrl;
- preview.hidden=false;
- fileinfo.textContent=file.name+" · "+(file.size/1024/1024).toFixed(2)+" MB";
- start.disabled=false;
- statusBox.textContent="Video selected. Language and dubbing settings can now be configured.";
-});
+input.addEventListener("change", function(){
+ const file = input.files && input.files[0];
+ if(!file) return;
 
-start.addEventListener('click',()=>{
- if(!movie.files.length)return;
- const source=document.getElementById('source').value;
- const target=document.getElementById('target').value;
- if(source===target){
-  statusBox.textContent="Please select a different target language.";
+ if(!file.type.startsWith("video/")){
+  fileName.textContent = "Please select a video file.";
   return;
  }
- statusBox.textContent="Your project settings are ready. The AI processing backend is not connected yet. Upload preview and settings work, but real transcription, voice matching, dubbing and lip-sync require backend APIs and video-processing services.";
+
+ if(preview.src){
+  URL.revokeObjectURL(preview.src);
+ }
+
+ preview.src = URL.createObjectURL(file);
+ preview.style.display = "block";
+ fileName.textContent = "Selected: " + file.name;
+});
+
+document.getElementById("startBtn").addEventListener("click", function(){
+ if(!input.files || !input.files.length){
+  alert("Please select a video first.");
+  return;
+ }
+ alert("Video selected. AI processing backend is not connected yet.");
 });
 </script>
 </body>
