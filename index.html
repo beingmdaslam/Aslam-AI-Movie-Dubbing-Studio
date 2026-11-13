@@ -35,6 +35,7 @@ video{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain;ma
 .note{font-size:12px;color:#aaa;line-height:1.5}
 #videoInfo{font-size:12px;color:#ccc;line-height:1.7;margin-top:10px;overflow-wrap:anywhere}
 button{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold}
+button:disabled{opacity:.6;cursor:wait}
 footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 .chip{width:58px;height:42px;margin:0 auto 12px;border:2px solid #a9a9a9;border-radius:6px;background:linear-gradient(135deg,#444,#111);box-shadow:0 0 14px #f22;position:relative}
 .chip:before{content:"";position:absolute;inset:7px;border:1px solid #aaa;border-radius:2px}
@@ -401,15 +402,90 @@ preview.addEventListener("error", function () {
   videoInfo.textContent = t.failed;
 });
 
-startButton.addEventListener("click", function () {
+/* CLOUDflare R2 VIDEO UPLOAD */
+startButton.addEventListener("click", async function () {
   const t = translations[appLanguage.value] || translations.en;
+  const file = fileInput.files && fileInput.files[0];
 
-  if (!fileInput.files || !fileInput.files[0]) {
+  if (!file) {
     statusText.textContent = t.empty;
     return;
   }
 
-  statusText.textContent = t.ready;
+  if (!file.type.startsWith("video/")) {
+    statusText.textContent = "Please select a valid video file.";
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024 * 1024) {
+    statusText.textContent = "Maximum upload size is 5 GB.";
+    return;
+  }
+
+  startButton.disabled = true;
+  startButton.textContent = "PREPARING UPLOAD...";
+
+  try {
+    const response = await fetch("/.netlify/functions/create-upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type,
+        fileSize: file.size
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.uploadUrl || !data.key) {
+      throw new Error(data.error || "Could not create upload URL.");
+    }
+
+    statusText.textContent = "Uploading video: 0%";
+
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open("PUT", data.uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", file.type);
+
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable) {
+          const percent = Math.round(
+            (event.loaded / event.total) * 100
+          );
+          statusText.textContent = "Uploading video: " + percent + "%";
+        }
+      };
+
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error("R2 upload failed. HTTP " + xhr.status));
+        }
+      };
+
+      xhr.onerror = function () {
+        reject(new Error("Network or CORS error. Please check connection."));
+      };
+
+      xhr.send(file);
+    });
+
+    statusText.textContent =
+      "Video uploaded successfully! Storage ID: " + data.key +
+      ". AI dubbing engine is not connected yet.";
+
+  } catch (error) {
+    statusText.textContent = "Upload failed: " + error.message;
+  } finally {
+    startButton.disabled = false;
+    startButton.textContent = t.start;
+  }
 });
 
 window.addEventListener("beforeunload", function () {
