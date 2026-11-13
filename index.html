@@ -4,131 +4,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aslam AI Movie Dubbing Studio</title>
+<title>ASLAM AI - Movie Dubbing Studio</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;padding:20px;background:#080d18;
- color:white;font-family:Arial,sans-serif
-}
-.container{max-width:650px;margin:auto}
-h1{text-align:center;color:#45dcff}
-.subtitle{text-align:center;color:#aaa}
-.card{
- background:#141e30;padding:20px;margin-top:20px;
- border-radius:16px;border:1px solid #263751
-}
-.upload{
- display:block;width:100%;padding:16px;
- background:#08b9dc;color:#00111a;
- border-radius:10px;text-align:center;
- font-weight:bold;cursor:pointer
-}
-input[type=file]{
- display:block;width:100%;padding:14px;
- background:#25334a;color:white;
- border-radius:10px;margin-top:12px;
-}
-select,button{
- width:100%;padding:15px;margin-top:14px;
- border:0;border-radius:10px;font-size:16px
-}
-select{background:#25334a;color:white}
-button{
- background:#08b9dc;color:#00111a;
- font-weight:bold
-}
-video{width:100%;margin-top:15px;border-radius:12px}
-.status{text-align:center;color:#49e6a5}
-.small{text-align:center;color:#aaa;font-size:13px}
+body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif}
+header{text-align:center;padding:30px 12px 20px}
+h1{font-size:38px;letter-spacing:4px;margin:0;color:#fff;text-shadow:0 0 18px #ff2020}
+header p{color:#aaa;letter-spacing:2px;margin-top:9px}
+main{max-width:850px;margin:auto;padding:15px}
+.features{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.feature{background:linear-gradient(145deg,#191919,#0d0d0d);border:1px solid #552020;border-radius:17px;padding:20px 10px;text-align:center;box-shadow:0 0 15px #650b0b33}
+.icon{font-size:38px;display:block;margin-bottom:12px}
+.movie{animation:bounce 1.5s infinite}
+.globe{animation:spin 5s linear infinite}
+.mic{animation:pulse 1s infinite}
+.lips{position:relative;display:inline-block;animation:pulse 1.5s infinite}
+.lips:after{content:"✦";position:absolute;color:#ff4040;font-size:15px;top:-8px;right:-15px;animation:shine 1s infinite}
+.feature h3{margin:5px 0;color:#ff4545;font-size:16px}
+.feature p{margin:7px 0 0;color:#aaa;font-size:12px}
+@keyframes bounce{50%{transform:translateY(-8px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{transform:scale(1.12)}}
+@keyframes shine{50%{opacity:0;transform:scale(.4)}}
+.panel{margin-top:22px;padding:20px;background:#121212;border:1px solid #572020;border-radius:16px}
+h2{font-size:19px;color:#ff4545;margin-top:0}
+label{display:block;margin:15px 0 8px;color:#ddd;font-size:14px}
+select,input{width:100%;padding:13px;background:#090909;color:white;border:1px solid #8c2929;border-radius:9px;font-size:15px}
+.upload{border:1px dashed #ff3333;padding:18px;border-radius:12px;text-align:center;margin-top:15px}
+video{width:100%;max-height:350px;margin-top:15px;border-radius:10px;background:#000}
+button{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold}
+.note{font-size:12px;color:#aaa;line-height:1.5}
+footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
+.chip{width:58px;height:42px;margin:0 auto 12px;border:2px solid #a9a9a9;border-radius:6px;background:linear-gradient(135deg,#444,#111);box-shadow:0 0 14px #f22;position:relative}
+.chip:before{content:"";position:absolute;inset:7px;border:1px solid #aaa;border-radius:2px}
+.chip:after{content:"";position:absolute;left:-7px;right:-7px;top:8px;height:22px;border-top:2px solid #aaa;border-bottom:2px solid #aaa}
+.power{color:#ff4545;letter-spacing:1px}
+@media(max-width:420px){h1{font-size:30px}.feature{padding:16px 6px}}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>🎬 ASLAM AI</h1>
-<p class="subtitle">Movie Dubbing Studio</p>
+<header>
+<h1>ASLAM AI</h1>
+<p>MOVIE DUBBING STUDIO</p>
+</header>
 
-<div class="card">
-<h2>📁 Upload Your Movie</h2>
-<p>Choose a video from your Android phone.</p>
-
-<label class="upload" for="videoFile">
-SELECT VIDEO FROM PHONE
-</label>
-
-<input
- type="file"
- id="videoFile"
- accept="video/*"
->
-
-<p id="fileName" class="status">No video selected</p>
-
-<video id="preview" controls playsinline
- style="display:none"></video>
+<main>
+<section class="features">
+<div class="feature">
+<span class="icon movie">🎬</span>
+<h3>Video Upload</h3>
+<p>Upload Movie / Video</p>
 </div>
+<div class="feature">
+<span class="icon globe">🌍</span>
+<h3>Multi Language</h3>
+<p>Global Language Support</p>
+</div>
+<div class="feature">
+<span class="icon mic">🎙️</span>
+<h3>Voice Matching</h3>
+<p>Character Voices / Clone</p>
+</div>
+<div class="feature">
+<span class="icon lips">🫦</span>
+<h3>AI Lip Sync</h3>
+<p>Natural & Perfect Matching</p>
+</div>
+</section>
 
-<div class="card">
-<h2>🌍 Dubbing Settings</h2>
+<section class="panel">
+<h2>🎞️ Movie Dubbing Studio</h2>
+
+<label>Video Language</label>
+<select id="sourceLanguage">
+<option value="auto">Auto Detect</option>
+<option>Hindi</option><option>English</option><option>Arabic</option>
+<option>Urdu</option><option>French</option><option>Spanish</option>
+<option>German</option><option>Chinese</option><option>Japanese</option>
+<option>Bengali</option><option>Turkish</option><option>Portuguese</option>
+</select>
 
 <label>Target Language</label>
-<select id="language">
-<option>Hindi</option>
-<option>English</option>
-<option>Arabic</option>
-<option>Urdu</option>
-<option>French</option>
-<option>Spanish</option>
-<option>German</option>
-<option>Chinese</option>
-<option>Japanese</option>
-<option>Bengali</option>
-<option>Turkish</option>
-<option>Portuguese</option>
+<select id="targetLanguage">
+<option>Hindi</option><option>English</option><option>Arabic</option>
+<option>Urdu</option><option>French</option><option>Spanish</option>
+<option>German</option><option>Chinese</option><option>Japanese</option>
+<option>Bengali</option><option>Turkish</option><option>Portuguese</option>
 </select>
 
-<label>Video Quality</label>
-<select id="quality">
-<option>1080p HD</option>
-<option>4K Ultra HD</option>
-</select>
+<div class="upload">
+<label for="videoFile">📁 Select Movie / Video</label>
+<input type="file" id="videoFile" accept="video/mp4,video/quicktime,video/*">
+<video id="preview" controls playsinline style="display:none"></video>
+</div>
 
-<button type="button" id="startBtn">START DUBBING</button>
-<p class="small" id="message">
-AI processing backend is not connected yet.
-</p>
-</div>
-</div>
+<p class="note">Your selected video will appear in the preview. Uploading and AI dubbing services will be connected in the next development stage.</p>
+<button type="button" onclick="alert('AI dubbing engine is not connected yet. This is the website preview.')">START AI DUBBING</button>
+</section>
+</main>
+
+<footer>
+<div class="chip"></div>
+<div class="power">Powered by Aslam</div>
+</footer>
 
 <script>
-const input = document.getElementById("videoFile");
-const preview = document.getElementById("preview");
-const fileName = document.getElementById("fileName");
-
-input.addEventListener("change", function(){
- const file = input.files && input.files[0];
- if(!file) return;
-
- if(!file.type.startsWith("video/")){
-  fileName.textContent = "Please select a video file.";
-  return;
- }
-
- if(preview.src){
-  URL.revokeObjectURL(preview.src);
- }
-
- preview.src = URL.createObjectURL(file);
- preview.style.display = "block";
- fileName.textContent = "Selected: " + file.name;
-});
-
-document.getElementById("startBtn").addEventListener("click", function(){
- if(!input.files || !input.files.length){
-  alert("Please select a video first.");
-  return;
- }
- alert("Video selected. AI processing backend is not connected yet.");
+const fileInput=document.getElementById('videoFile');
+const preview=document.getElementById('preview');
+let currentVideoURL=null;
+fileInput.addEventListener('change',function(){
+ const file=this.files && this.files[0];
+ if(!file)return;
+ if(currentVideoURL)URL.revokeObjectURL(currentVideoURL);
+ currentVideoURL=URL.createObjectURL(file);
+ preview.src=currentVideoURL;
+ preview.style.display='block';
+ preview.load();
 });
 </script>
 </body>
