@@ -31,9 +31,10 @@ h2{font-size:19px;color:#ff4545;margin-top:0}
 label{display:block;margin:15px 0 8px;color:#ddd;font-size:14px}
 select,input{width:100%;padding:13px;background:#090909;color:white;border:1px solid #8c2929;border-radius:9px;font-size:15px}
 .upload{border:1px dashed #ff3333;padding:18px;border-radius:12px;text-align:center;margin-top:15px}
-video{width:100%;max-height:350px;margin-top:15px;border-radius:10px;background:#000}
-button{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold}
+video{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain;margin-top:15px;border-radius:10px;background:#000}
 .note{font-size:12px;color:#aaa;line-height:1.5}
+#videoInfo{font-size:12px;color:#ccc;line-height:1.7;margin-top:10px;overflow-wrap:anywhere}
+button{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold}
 footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 .chip{width:58px;height:42px;margin:0 auto 12px;border:2px solid #a9a9a9;border-radius:6px;background:linear-gradient(135deg,#444,#111);box-shadow:0 0 14px #f22;position:relative}
 .chip:before{content:"";position:absolute;inset:7px;border:1px solid #aaa;border-radius:2px}
@@ -75,7 +76,7 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 <section class="panel">
 <h2>🎞️ Movie Dubbing Studio</h2>
 
-<label>Video Language</label>
+<label for="sourceLanguage">Video Language</label>
 <select id="sourceLanguage">
 <option value="auto">Auto Detect</option>
 <option>Hindi</option><option>English</option><option>Arabic</option>
@@ -84,7 +85,7 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 <option>Bengali</option><option>Turkish</option><option>Portuguese</option>
 </select>
 
-<label>Target Language</label>
+<label for="targetLanguage">Target Language</label>
 <select id="targetLanguage">
 <option>Hindi</option><option>English</option><option>Arabic</option>
 <option>Urdu</option><option>French</option><option>Spanish</option>
@@ -92,14 +93,25 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 <option>Bengali</option><option>Turkish</option><option>Portuguese</option>
 </select>
 
+<label for="quality">Output Quality</label>
+<select id="quality">
+<option value="original" selected>Original Quality</option>
+<option value="720">HD 720p</option>
+<option value="1080">Full HD 1080p</option>
+<option value="2160">4K Ultra HD</option>
+</select>
+
 <div class="upload">
 <label for="videoFile">📁 Select Movie / Video</label>
-<input type="file" id="videoFile" accept="video/mp4,video/quicktime,video/*">
-<video id="preview" controls playsinline style="display:none"></video>
+<input type="file" id="videoFile" accept="video/*">
+<video id="preview" controls playsinline webkit-playsinline preload="metadata" hidden></video>
+<div id="videoInfo">No video selected yet.</div>
 </div>
 
-<p class="note">Your selected video will appear in the preview. Uploading and AI dubbing services will be connected in the next development stage.</p>
-<button type="button" onclick="alert('AI dubbing engine is not connected yet. This is the website preview.')">START AI DUBBING</button>
+<p class="note">Your original video preview is displayed without intentional quality reduction. Actual AI dubbing, voice matching, lip sync and HD/4K export require a connected processing engine.</p>
+
+<button type="button" id="startButton">START AI DUBBING</button>
+<p class="note" id="status" aria-live="polite"></p>
 </section>
 </main>
 
@@ -109,17 +121,80 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 </footer>
 
 <script>
-const fileInput=document.getElementById('videoFile');
-const preview=document.getElementById('preview');
-let currentVideoURL=null;
-fileInput.addEventListener('change',function(){
- const file=this.files && this.files[0];
- if(!file)return;
- if(currentVideoURL)URL.revokeObjectURL(currentVideoURL);
- currentVideoURL=URL.createObjectURL(file);
- preview.src=currentVideoURL;
- preview.style.display='block';
- preview.load();
+"use strict";
+
+const fileInput = document.getElementById("videoFile");
+const preview = document.getElementById("preview");
+const videoInfo = document.getElementById("videoInfo");
+const statusText = document.getElementById("status");
+const startButton = document.getElementById("startButton");
+
+let currentVideoURL = null;
+
+fileInput.addEventListener("change", function () {
+  const file = fileInput.files && fileInput.files[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("video/")) {
+    videoInfo.textContent = "Please select a valid video file.";
+    return;
+  }
+
+  if (currentVideoURL) {
+    URL.revokeObjectURL(currentVideoURL);
+    currentVideoURL = null;
+  }
+
+  preview.pause();
+  preview.removeAttribute("src");
+  preview.hidden = true;
+  preview.load();
+
+  videoInfo.textContent = "Loading video preview...";
+  statusText.textContent = "";
+
+  currentVideoURL = URL.createObjectURL(file);
+  preview.src = currentVideoURL;
+  preview.hidden = false;
+  preview.load();
+});
+
+preview.addEventListener("loadedmetadata", function () {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+
+  const duration = Number.isFinite(preview.duration)
+    ? Math.floor(preview.duration)
+    : 0;
+
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+
+  videoInfo.textContent =
+    "File: " + file.name +
+    " | Size: " + (file.size / (1024 * 1024)).toFixed(1) + " MB" +
+    " | Resolution: " + preview.videoWidth + " × " + preview.videoHeight +
+    " | Duration: " + minutes + ":" + String(seconds).padStart(2, "0");
+});
+
+preview.addEventListener("error", function () {
+  videoInfo.textContent =
+    "Preview failed. Try an MP4 video with H.264 video encoding.";
+});
+
+startButton.addEventListener("click", function () {
+  if (!fileInput.files || !fileInput.files[0]) {
+    statusText.textContent = "Please select a video first.";
+    return;
+  }
+
+  statusText.textContent =
+    "Video selected. AI dubbing engine is not connected yet.";
+});
+
+window.addEventListener("beforeunload", function () {
+  if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
 });
 </script>
 </body>
