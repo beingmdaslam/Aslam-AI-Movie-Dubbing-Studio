@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASLAM AI — Local Movie Dubbing Studio</title>
+<style>
+:root{color-scheme:dark;--red:#ff3434;--panel:#151515;--line:#542020;--muted:#aaa}
+*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font:15px/1.5 Arial,sans-serif}
+header{text-align:center;padding:26px 14px 16px}h1{margin:0;color:#ff3939;font-size:36px;letter-spacing:3px;text-shadow:0 0 18px #f22}header p{margin:4px 0;color:#ddd;letter-spacing:3px;font-size:12px}
+main{width:min(920px,94%);margin:0 auto 40px}.panel{background:linear-gradient(145deg,#191919,#0e0e0e);border:1px solid var(--line);border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 0 22px #250909}
+h2{font-size:19px;color:#ff4b4b;margin:0 0 14px}h3{font-size:16px;margin:0 0 8px;color:#fff}
+label{display:block;color:#ddd;font-size:13px;margin:12px 0 6px}input,select,textarea{width:100%;padding:11px;border:1px solid #6d2929;border-radius:9px;background:#090909;color:#fff;font:inherit}
+input[type=file]{padding:9px}input[type=range]{padding:0;accent-color:#f44}
+button,.download{display:inline-block;border:0;border-radius:9px;padding:13px 17px;background:linear-gradient(90deg,#850000,#ef3030);color:white;font-weight:bold;cursor:pointer;text-decoration:none}
+button:disabled{opacity:.5;cursor:wait}.full{width:100%;margin-top:14px}.muted{color:var(--muted);font-size:12px}.status{padding:12px;border:1px solid #432020;border-radius:9px;background:#0c0c0c;min-height:44px;margin-top:12px;overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.speaker,.line{padding:12px;border:1px solid #492222;border-radius:10px;background:#101010;margin:10px 0}.line p{margin:5px 0;overflow-wrap:anywhere}.line textarea{min-height:60px;resize:vertical}
+#review,#result{display:none}.pill{display:inline-block;color:#ff8c8c;border:1px solid #783333;border-radius:20px;padding:2px 9px;font-size:11px}
+footer{text-align:center;color:#888;font-size:12px;padding:12px 0 28px}
+@media(max-width:560px){h1{font-size:29px}.grid{grid-template-columns:1fr}.panel{padding:15px}}
+</style>
+</head>
+<body>
+<header><h1>ASLAM AI</h1><p>LOCAL MOVIE DUBBING STUDIO</p><div class="pill">FREE LOCAL PROCESSING • NO PAID API</div></header>
+<main>
+<section class="panel">
+<h2>1. Select movie and languages</h2>
+<label for="video">Movie / Video (MP4, MOV, MKV, WEBM, AVI, M4V — max 1 GB)</label>
+<input id="video" type="file" accept="video/*,.mkv,.mov,.mp4,.webm">
+<div class="grid">
+<div><label for="source">Original language</label><select id="source"><option value="auto">Auto detect</option><option value="en">English</option><option value="hi">Hindi</option><option value="ar">Arabic</option><option value="ur">Urdu</option><option value="fr">French</option><option value="es">Spanish</option><option value="de">German</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="bn">Bengali</option><option value="tr">Turkish</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="it">Italian</option></select></div>
+<div><label for="target">Dub into</label><select id="target"><option value="hi">Hindi</option><option value="en">English</option><option value="ar">Arabic</option><option value="ur">Urdu</option><option value="fr">French</option><option value="es">Spanish</option><option value="de">German</option><option value="zh-cn">Chinese</option><option value="ja">Japanese</option><option value="bn">Bengali</option><option value="tr">Turkish</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="it">Italian</option></select></div>
+</div>
+<label for="background">Original soundtrack volume: <span id="volumeValue">18%</span></label><input id="background" type="range" min="0" max="100" value="18">
+<p class="muted">Demucs separation is used when installed. Otherwise the original soundtrack is reduced, so original dialogue may still be audible. XTTS supports only selected target languages.</p>
+<button id="analyze" class="full">ANALYZE VIDEO & DETECT CHARACTERS</button>
+<div id="status" class="status" role="status">Start the local worker, then select a video.</div>
+</section>
+
+<section class="panel" id="review">
+<h2>2. Review dialogue and assign character voices</h2>
+<p class="muted">Check each translated line and correct the detected speaker where needed. Upload a clean voice sample that you own or have permission to use for every character.</p>
+<div id="speakers"></div>
+<h3 style="margin-top:18px">Dialogue review</h3>
+<div id="lines"></div>
+<button id="render" class="full">GENERATE DUBBED MOVIE</button>
+</section>
+
+<section class="panel" id="result">
+<h2>3. Your dubbed movie</h2>
+<p id="resultNote" class="muted"></p>
+<a id="download" class="download" download="aslam-ai-dubbed.mp4">DOWNLOAD FINAL MP4</a>
+</section>
+<footer>ASLAM AI • Runs on your own computer. Keep this worker window open during processing.</footer>
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const videoInput=$("video"), statusBox=$("status"), analyzeBtn=$("analyze"), renderBtn=$("render");
+let originalSegments=[], speakers=[], translatedSegments=[], finalUrl=null;
+$("background").addEventListener("input",()=>{$("volumeValue").textContent=$("background").value+"%";});
+function status(message){statusBox.textContent=message;}
+function setBusy(button,busy,label){button.disabled=busy;if(busy)button.dataset.old=button.textContent;button.textContent=busy?label:(button.dataset.old||button.textContent);}
+async function checkedFetch(url,options){let response;try{response=await fetch(url,options);}catch(e){throw new Error("Cannot reach local worker. Start start-windows.bat and keep its window open.");}if(!response.ok){let detail="Request failed ("+response.status+")";try{const data=await response.json();detail=data.detail||data.error||detail;}catch(_){}throw new Error(detail);}return response;}
+function escapeText(value){return String(value??"");}
+async function analyze(){
+ const file=videoInput.files&&videoInput.files[0];if(!file){status("Please select a video first.");return;}
+ if(file.size>1024*1024*1024){status("Local worker limit is 1 GB per video.");return;}
+ setBusy(analyzeBtn,true,"CHECKING LOCAL WORKER...");
+ $("review").style.display="none";$("result").style.display="none";
+ try{
+  const health=await checkedFetch("/health");await health.json();
+  status("Analyzing video, extracting audio and detecting speakers. This may take a long time on CPU...");
+  const form=new FormData();form.append("video",file);
+  const detected=await (await checkedFetch("/diarize",{method:"POST",body:form})).json();
+  originalSegments=detected.segments||[];speakers=detected.speakers||[];
+  if(!originalSegments.length)throw new Error("No dialogue was detected in this video.");
+  const source=$("source").value==="auto"?detected.detectedLanguage:$("source").value;
+  const target=$("target").value;
+  status("Speaker detection complete. Preparing local translation model...");
+  translatedSegments=originalSegments.map(s=>({...s}));
+  if(source!==target){
+   const langs=await (await checkedFetch("/translation/languages")).json();
+   const installed=(langs.installed||[]).some(x=>x.code===source)&& (langs.installed||[]).some(x=>x.code===target);
+   if(!installed){
+    status("Downloading the free "+source+" → "+target+" translation model. First setup may take time...");
+    const install=await checkedFetch("/translation/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sourceLanguage:source,targetLanguage:target})});
+    await install.json();
+   }
+   status("Translating "+translatedSegments.length+" dialogue segments...");
+   const translated=await checkedFetch("/translate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sourceLanguage:source,targetLanguage:target,segments:translatedSegments})});
+   translatedSegments=(await translated.json()).segments;
+  }
+  renderReview();
+  $("review").style.display="block";
+  status("Analysis complete. Review character labels, edit dialogue and add voice samples.");
+  $("review").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(e){status("ERROR: "+e.message);}
+ finally{setBusy(analyzeBtn,false);}
+}
+function renderReview(){
+ const speakerIds=[...new Set(translatedSegments.map(s=>s.speakerId||"speaker_unknown"))];
+ speakerIds.forEach(id=>{if(!speakers.some(s=>s.speakerId===id))speakers.push({speakerId:id,label:id==="speaker_unknown"?"Unidentified voice":id});});
+ const speakerBox=$("speakers");speakerBox.replaceChildren();
+ speakers.forEach((sp,index)=>{
+  const card=document.createElement("div");card.className="speaker";
+  const heading=document.createElement("h3");heading.textContent=sp.label||sp.speakerId;card.appendChild(heading);
+  const id=document.createElement("p");id.className="muted";id.textContent=sp.speakerId;card.appendChild(id);
+  const label=document.createElement("label");label.textContent="Voice sample for this character";card.appendChild(label);
+  const input=document.createElement("input");input.type="file";input.accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*";input.dataset.speaker=sp.speakerId;input.id="voice_"+index;card.appendChild(input);
+  speakerBox.appendChild(card);
+ });
+ const lines=$("lines");lines.replaceChildren();
+ translatedSegments.forEach((segment,index)=>{
+  const card=document.createElement("div");card.className="line";
+  const title=document.createElement("p");title.className="muted";title.textContent="#"+(index+1)+" • "+Number(segment.start).toFixed(2)+"s – "+Number(segment.end).toFixed(2)+"s";card.appendChild(title);
+  const text=document.createElement("textarea");text.value=segment.text||"";text.setAttribute("aria-label","Translated dialogue "+(index+1));text.addEventListener("input",()=>{translatedSegments[index].text=text.value;});card.appendChild(text);
+  const select=document.createElement("select");select.setAttribute("aria-label","Speaker for dialogue "+(index+1));
+  speakers.forEach(sp=>{const option=document.createElement("option");option.value=sp.speakerId;option.textContent=sp.label||sp.speakerId;select.appendChild(option);});
+  select.value=segment.speakerId||"speaker_unknown";select.addEventListener("change",()=>{translatedSegments[index].speakerId=select.value;});card.appendChild(select);
+  lines.appendChild(card);
+ });
+}
+async function render(){
+ const file=videoInput.files&&videoInput.files[0];if(!file)return;
+ const voiceInputs=[...document.querySelectorAll("#speakers input[type=file]")];
+ const selected=voiceInputs.filter(input=>input.files&&input.files[0]);
+ const voiceMap=new Map(selected.map(input=>[input.dataset.speaker,input.files[0]]));
+ const needed=[...new Set(translatedSegments.map(s=>s.speakerId))];
+ const missing=needed.filter(id=>!voiceMap.has(id));
+ if(missing.length){status("Please add a voice sample for: "+missing.join(", "));return;}
+ const target=$("target").value;
+ setBusy(renderBtn,true,"GENERATING CHARACTER VOICES...");
+ try{
+  status("Generating dialogue voices and mixing the movie. This can take a long time...");
+  const data=new FormData();data.append("video",file);data.append("segments_json",JSON.stringify(translatedSegments));data.append("speaker_ids_json",JSON.stringify([...voiceMap.keys()]));
+  for(const voice of voiceMap.values())data.append("voice_samples",voice);
+  data.append("language",target);data.append("background_volume",String(Number($("background").value)/100));
+  const response=await checkedFetch("/dub-audio",{method:"POST",body:data});
+  let dubbedBlob=await response.blob();
+  const separation=response.headers.get("X-ASLAM-Background-Separation")||"reduced-original-audio";
+  status("Dubbed audio ready. Burning translated subtitles into the video...");
+  const srt=translatedSegments.map((s,i)=>{const stamp=n=>{let ms=Math.max(0,Math.round(Number(n)*1000));let h=Math.floor(ms/3600000);ms%=3600000;let m=Math.floor(ms/60000);ms%=60000;let sec=Math.floor(ms/1000);let milli=ms%1000;return [h,m,sec].map(x=>String(x).padStart(2,"0")).join(":")+","+String(milli).padStart(3,"0");};return (i+1)+"\n"+stamp(s.start)+" --> "+stamp(s.end)+"\n"+s.text+"\n";}).join("\n");
+  let finalBlob=dubbedBlob;let captions="not applied";
+  try{
+   const cap=new FormData();cap.append("video",dubbedBlob,"dubbed.mp4");cap.append("subtitles",new Blob([srt],{type:"text/plain;charset=utf-8"}),"translated.srt");
+   const burned=await checkedFetch("/subtitles/burn-in",{method:"POST",body:cap});
+   finalBlob=await burned.blob();captions="burned into video";
+  }catch(e){captions="not burned in ("+e.message+"); separate SRT export can be added later";}
+  if(finalUrl)URL.revokeObjectURL(finalUrl);finalUrl=URL.createObjectURL(finalBlob);
+  $("download").href=finalUrl;$("result").style.display="block";
+  $("resultNote").textContent="Background audio: "+separation+". Subtitles: "+captions+". Original video quality is re-encoded only when subtitles are burned in.";
+  status("Finished. Your dubbed MP4 is ready to download.");
+  $("result").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(e){status("ERROR: "+e.message);}
+ finally{setBusy(renderBtn,false);}
+}
+analyzeBtn.addEventListener("click",analyze);renderBtn.addEventListener("click",render);
+window.addEventListener("beforeunload",()=>{if(finalUrl)URL.revokeObjectURL(finalUrl);});
+</script>
+</body>
+</html>
