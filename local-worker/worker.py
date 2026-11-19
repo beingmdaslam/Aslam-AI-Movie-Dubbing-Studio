@@ -5,6 +5,9 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field
+import argostranslate.package
+import argostranslate.translate
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 
@@ -30,6 +33,17 @@ MAX_UPLOAD_BYTES = 1024 * 1024 * 1024  # 1 GB local-worker safety cap
 _model = None
 
 
+class TranslationRequest(BaseModel):
+    sourceLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
+    targetLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
+    segments: list[dict] = Field(min_length=1, max_length=5000)
+
+
+class InstallTranslationRequest(BaseModel):
+    sourceLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
+    targetLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
+
+
 def get_model():
     global _model
     if _model is None:
@@ -46,7 +60,8 @@ def health():
     return {
         "ok": True,
         "service": "ASLAM AI Free Local Worker",
-        "stage": "audio_transcription",
+        "stage": "transcription_and_translation",
+        "translationEngine": "Argos Translate (local open-source)",
         "model": MODEL_SIZE,
         "device": "cpu",
     }
@@ -152,3 +167,121 @@ async def transcribe(video: UploadFile = File(...)):
             )
         finally:
             await video.close()
+
+@app.get("/translation/languages")
+def translation_languages():
+    installed = argostranslate.translate.get_installed_languages()
+    return {
+        "ok": True,
+        "installed": [
+            {"code": language.code, "name": language.name}
+            for language in installed
+        ],
+    }
+
+
+@app.post("/translation/install")
+def install_translation_pair(request: InstallTranslationRequest):
+    if request.sourceLanguage == request.targetLanguage:
+        raise HTTPException(status_code=400, detail="Choose two different languages.")
+
+    try:
+        argostranslate.package.update_package_index()
+        packages = argostranslate.package.get_available_packages()
+        match = next(
+            (
+                package for package in packages
+                if package.from_code == request.sourceLanguage
+                and package.to_code == request.targetLanguage
+            ),
+            None,
+        )
+        if match is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No direct free Argos model is listed for this language pair.",
+            )
+
+        package_path = match.download()
+        argostranslate.package.install_from_path(package_path)
+        return {
+            "ok": True,
+            "installed": True,
+            "sourceLanguage": request.sourceLanguage,
+            "targetLanguage": request.targetLanguage,
+            "message": "Free translation model installed locally.",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print("Argos model installation error:", repr(exc))
+        raise HTTPException(
+            status_code=502,
+            detail="Could not download or install the free translation model.",
+        )
+
+
+@app.post("/translate")
+def translate_segments(request: TranslationRequest):
+    if request.sourceLanguage == request.targetLanguage:
+        return {
+            "ok": True,
+            "stage": "translation_complete",
+            "segments": request.segments,
+        }
+
+    installed = argostranslate.translate.get_installed_languages()
+    source = next(
+        (language for language in installed if language.code == request.sourceLanguage),
+        None,
+    )
+    target = next(
+        (language for language in installed if language.code == request.targetLanguage),
+        None,
+    )
+
+    if source is None or target is None:
+        raise HTTPException(
+            status_code=409,
+            detail="One or both language models are missing. Install the language pair first.",
+        )
+
+    translator = source.get_translation(target)
+    if translator is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No installed translation route exists for this language pair.",
+        )
+
+    translated = []
+    for index, segment in enumerate(request.segments):
+        text = segment.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {index} has no valid text.",
+            )
+        try:
+            translated_text = translator.translate(text)
+        except Exception as exc:
+            print("Segment translation error:", repr(exc))
+            raise HTTPException(
+                status_code=500,
+                detail=f"Translation failed at segment {index}.",
+            )
+
+        translated.append({
+            **segment,
+            "sourceText": text,
+            "text": translated_text,
+        })
+
+    return {
+        "ok": True,
+        "stage": "translation_complete",
+        "sourceLanguage": request.sourceLanguage,
+        "targetLanguage": request.targetLanguage,
+        "segments": translated,
+        "note": "Timestamps and word alignment are retained from the source transcript. Review translated dialogue before voice generation.",
+    }
+
