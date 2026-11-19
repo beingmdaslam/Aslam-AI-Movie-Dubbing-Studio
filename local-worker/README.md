@@ -150,7 +150,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 - `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
 - Face detector weights: `WAV2LIP_DIR/face_detection/detection/sfd/s3fd.pth` (the official repository requires this S3FD file)
-- `PYTHON`: optional full path to the Python executable inside the separate Wav2Lip environment. If unset, the worker's current Python executable is used.
+- `WAV2LIP_PYTHON`: full path to the Python executable inside the separate Wav2Lip environment. If unset, legacy `PYTHON` is accepted; otherwise the worker's current Python executable is used. The setup helpers write `WAV2LIP_PYTHON` and do not change the global `PYTHON` setting.
 
 Official upstream downloads (manual; review the non-commercial restriction first):
 - Wav2Lip checkpoint: [official weights folder](https://drive.google.com/drive/folders/153HLrqlBNxzZcHi17PEvP09kkAfzRshM?usp=share_link)
