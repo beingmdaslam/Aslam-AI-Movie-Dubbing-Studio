@@ -15,24 +15,25 @@ py_compile.compile(str(WORKER), doraise=True)
 class StudioParser(HTMLParser):
     pass
 
-html = STUDIO.read_text(encoding="utf-8")
-StudioParser().feed(html)
-match = re.search(r"<script>(.*?)</script>", html, flags=re.DOTALL)
-if not match:
-    raise SystemExit("No inline JavaScript found in studio.html")
+html_files = [STUDIO, ROOT.parent / "index.html"]
+for html_path in html_files:
+    html = html_path.read_text(encoding="utf-8")
+    StudioParser().feed(html)
+    scripts = re.findall(r"<script>(.*?)</script>", html, flags=re.DOTALL)
+    if not scripts:
+        raise SystemExit(f"No inline JavaScript found in {html_path.name}")
+    for script in scripts:
+        node = shutil.which("node")
+        if not node:
+            raise SystemExit("Node.js is required for JavaScript syntax checks.")
+        with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as handle:
+            handle.write(script)
+            js_path = handle.name
+        try:
+            subprocess.run([node, "--check", js_path], check=True)
+        finally:
+            Path(js_path).unlink(missing_ok=True)
 
-node = shutil.which("node")
-if not node:
-    raise SystemExit("Node.js is required for the studio JavaScript syntax check.")
-
-with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as handle:
-    handle.write(match.group(1))
-    js_path = handle.name
-
-try:
-    subprocess.run([node, "--check", js_path], check=True)
-finally:
-    Path(js_path).unlink(missing_ok=True)
 
 required_routes = [
     '@app.get("/studio")',
@@ -47,4 +48,13 @@ missing = [route for route in required_routes if route not in source]
 if missing:
     raise SystemExit("Missing expected API routes: " + ", ".join(missing))
 
-print("Static checks passed: Python syntax, HTML parsing, JavaScript syntax and workflow routes.")
+if r'"\\n".join(lines)' in source:
+    raise SystemExit("SRT exporter contains a literal \\n instead of real line breaks.")
+
+index_source = (ROOT.parent / "index.html").read_text(encoding="utf-8")
+if '/.netlify/functions/create-upload' in index_source:
+    raise SystemExit("Main START button must not upload videos to paid/cloud storage.")
+if 'http://127.0.0.1:8765/studio' not in index_source:
+    raise SystemExit("Main START button is not connected to the local studio.")
+
+print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
