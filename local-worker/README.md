@@ -36,6 +36,8 @@ source .venv/bin/activate
 Then:
 ```bash
 pip install -r requirements.txt
+# Optional: install XTTS voice generation separately (large ML dependency set)
+pip install -r requirements-voice.txt
 uvicorn worker:app --host 127.0.0.1 --port 8765
 ```
 
@@ -97,7 +99,7 @@ Use `POST /speakers/assign` with the transcript segments and an `assignments` ob
 
 The local `POST /tts/clone` endpoint accepts multipart form fields `text` and `language`, plus a `reference_audio` file (WAV/MP3/M4A/FLAC/OGG, up to 20 MB). It returns a WAV file generated to resemble the supplied voice sample. Check supported language codes with `GET /tts/languages`. Hindi (`hi`), Arabic (`ar`) and English (`en`) are included by the model; quality varies and each language should be tested.
 
-The first request downloads the XTTS-v2 model and can take time and substantial disk space. CPU generation may be slow. Use only voice recordings you own or have explicit permission to use; never clone someone else's voice without consent. XTTS-v2 model weights are governed by the Coqui Public Model License, which has restrictions including non-commercial use; check that license before any commercial/public deployment. The software and model download do not require a paid API, but this does not mean the model is cleared for every use.
+Install the optional dependency first with `pip install -r requirements-voice.txt`. The first request downloads the XTTS-v2 model and can take time and substantial disk space. CPU generation may be slow. Use only voice recordings you own or have explicit permission to use; never clone someone else's voice without consent. XTTS-v2 model weights are governed by the Coqui Public Model License, which has restrictions including non-commercial use; check that license before any commercial/public deployment. The software and model download do not require a paid API, but this does not mean the model is cleared for every use.
 
 Example multipart fields in `/docs`:
 - `text`: `नमस्ते, आप कैसे हैं?`
