@@ -22,7 +22,7 @@ The API can now start and serve its health check and studio page even before opt
 
 ## Install
 
-**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages but does not install FFmpeg or optional XTTS/Wav2Lip models.
+**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages and offers an optional FFmpeg installation through Windows Package Manager (winget) if FFmpeg is missing. XTTS and Wav2Lip models remain optional separate installs.
 
 Manual setup:
 
