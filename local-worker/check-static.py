@@ -42,6 +42,8 @@ required_routes = [
     '@app.post("/translate")',
     '@app.post("/dub-audio")',
     '@app.post("/subtitles/burn-in")',
+    '@app.post("/audio/extract")',
+    '@app.post("/lip-sync")',
 ]
 source = WORKER.read_text(encoding="utf-8")
 missing = [route for route in required_routes if route not in source]
