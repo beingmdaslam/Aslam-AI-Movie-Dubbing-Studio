@@ -142,7 +142,8 @@ async function render(){
   const separation=response.headers.get("X-ASLAM-Background-Separation")||"reduced-original-audio";
   status("Dubbed audio ready. Burning translated subtitles into the video...");
   const srt=translatedSegments.map((s,i)=>{const stamp=n=>{let ms=Math.max(0,Math.round(Number(n)*1000));let h=Math.floor(ms/3600000);ms%=3600000;let m=Math.floor(ms/60000);ms%=60000;let sec=Math.floor(ms/1000);let milli=ms%1000;return [h,m,sec].map(x=>String(x).padStart(2,"0")).join(":")+","+String(milli).padStart(3,"0");};return (i+1)+"\n"+stamp(s.start)+" --> "+stamp(s.end)+"\n"+s.text+"\n";}).join("\n");
-  if(srtUrl)URL.revokeObjectURL(srtUrl);srtUrl=URL.createObjectURL(new Blob([srt],{type:"text/plain;charset=utf-8"}));$("srtDownload").href=srtUrl;\n  let finalBlob=dubbedBlob;let captions="not applied";
+  if(srtUrl)URL.revokeObjectURL(srtUrl);srtUrl=URL.createObjectURL(new Blob([srt],{type:"text/plain;charset=utf-8"}));$("srtDownload").href=srtUrl;
+  let finalBlob=dubbedBlob;let captions="not applied";
   try{
    const cap=new FormData();cap.append("video",dubbedBlob,"dubbed.mp4");cap.append("subtitles",new Blob([srt],{type:"text/plain;charset=utf-8"}),"translated.srt");
    const burned=await checkedFetch("/subtitles/burn-in",{method:"POST",body:cap});
