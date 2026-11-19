@@ -62,6 +62,10 @@ if '/.netlify/functions/create-upload' in index_source:
     raise SystemExit("Main START button must not upload videos to paid/cloud storage.")
 if 'http://127.0.0.1:8765/studio' not in index_source:
     raise SystemExit("Main START button is not connected to the local studio.")
+if "Voice Matching" in index_source or "Character Voices / Clone" in index_source:
+    raise SystemExit("The main page must not advertise voice cloning in the current steps 2-5 workflow.")
+if "OPEN LOCAL STUDIO" not in index_source:
+    raise SystemExit("The main page must clearly open the local studio rather than promise automatic voice dubbing.")
 studio_source = STUDIO.read_text(encoding="utf-8")
 if 'Voice cloning is intentionally excluded' not in studio_source:
     raise SystemExit("The current studio must clearly exclude voice cloning.")
