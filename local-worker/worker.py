@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import subprocess
 import tempfile
@@ -702,6 +703,35 @@ async def dub_audio(
                     detail="Could not extract original audio. The video must contain an audio track.",
                 )
 
+            # Optional Demucs separation removes most speech/vocals from the backing track.
+            # If the package/model is unavailable, keep the original soundtrack at reduced volume.
+            background_mix_path = background_path
+            separation_used = False
+            try:
+                import importlib.util
+                if (
+                    os.getenv("ASLAM_SEPARATE_BACKGROUND", "true").lower() == "true"
+                    and importlib.util.find_spec("demucs") is not None
+                ):
+                    separated_dir = root / "separated"
+                    separation = subprocess.run(
+                        [
+                            sys.executable, "-m", "demucs",
+                            "-n", "htdemucs", "--two-stems=vocals",
+                            "-o", str(separated_dir), str(background_path),
+                        ],
+                        capture_output=True, text=True, timeout=6 * 60 * 60,
+                    )
+                    candidate = separated_dir / "htdemucs" / background_path.stem / "no_vocals.wav"
+                    if separation.returncode == 0 and candidate.exists():
+                        background_mix_path = candidate
+                        separation_used = True
+                    else:
+                        print("Demucs separation unavailable; using reduced original soundtrack:",
+                              separation.stderr[-1500:])
+            except Exception as separation_error:
+                print("Demucs separation skipped:", repr(separation_error))
+
             engine = get_tts_model()
             reference_paths = {}
             for speaker_id, upload in voice_map.items():
@@ -736,7 +766,7 @@ async def dub_audio(
                 generated_paths.append((generated_path, float(segment["start"])))
 
             # Input 0 is the video; input 1 is its extracted original soundtrack.
-            command = [ffmpeg, "-y", "-i", str(source_path), "-i", str(background_path)]
+            command = [ffmpeg, "-y", "-i", str(source_path), "-i", str(background_mix_path)]
             for generated_path, _ in generated_paths:
                 command.extend(["-i", str(generated_path)])
 
@@ -770,7 +800,8 @@ async def dub_audio(
                 content=output_path.read_bytes(),
                 media_type="video/mp4",
                 headers={
-                    "Content-Disposition": 'attachment; filename="aslam-ai-dubbed.mp4"'
+                    "Content-Disposition": 'attachment; filename="aslam-ai-dubbed.mp4"',
+                    "X-ASLAM-Background-Separation": "demucs" if separation_used else "reduced-original-audio",
                 },
             )
         except HTTPException:
