@@ -961,3 +961,36 @@ async def lip_sync(
             await video.close()
             await dubbed_audio.close()
 
+class SpeakerAssignmentRequest(BaseModel):
+    segments: list[dict] = Field(min_length=1, max_length=10000)
+    assignments: dict[str, str] = Field(min_length=1, max_length=100)
+
+
+@app.post("/speakers/assign")
+def assign_speakers(request: SpeakerAssignmentRequest):
+    """Apply human-reviewed speaker labels to transcript segments."""
+    valid_assignments = {}
+    for source_id, target_id in request.assignments.items():
+        if not source_id.strip() or not target_id.strip() or len(target_id) > 80:
+            raise HTTPException(status_code=400, detail="Speaker assignment IDs must be non-empty and under 80 characters.")
+        valid_assignments[source_id] = target_id
+
+    updated = []
+    for index, segment in enumerate(request.segments):
+        if not isinstance(segment, dict):
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} is invalid.")
+        current_id = segment.get("speakerId")
+        if current_id is not None and not isinstance(current_id, str):
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} has an invalid speaker ID.")
+        updated.append({
+            **segment,
+            "speakerId": valid_assignments.get(current_id, current_id or "speaker_unknown"),
+        })
+
+    return {
+        "ok": True,
+        "stage": "speaker_assignment_complete",
+        "segments": updated,
+        "note": "Assignments are applied to the submitted transcript only; keep the returned segments for the next dubbing stage.",
+    }
+
