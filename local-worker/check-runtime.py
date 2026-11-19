@@ -132,6 +132,73 @@ if ffmpeg:
         assert extracted.status_code == 200, extracted.text
         assert extracted.content.startswith(b"RIFF")
 
+        # Subtitle export, speaker correction and subtitle burn-in are model-free.
+        srt_response = client.post(
+            "/subtitles/srt",
+            json={"segments": transcript_data["segments"], "useSourceText": False},
+        )
+        assert srt_response.status_code == 200, srt_response.text
+        assert "Hello world." in srt_response.text
+
+        assignment = client.post(
+            "/speakers/assign",
+            json={
+                "segments": [{"start": 0.2, "end": 0.8, "text": "Hello", "speakerId": "speaker_01"}],
+                "assignments": {"speaker_01": "main_character"},
+            },
+        )
+        assert assignment.status_code == 200, assignment.text
+        assert assignment.json()["segments"][0]["speakerId"] == "main_character"
+
+        with movie_path.open("rb") as movie:
+            burned = client.post(
+                "/subtitles/burn-in",
+                files={
+                    "video": ("test-movie.mp4", movie, "video/mp4"),
+                    "subtitles": ("captions.srt", srt_response.content, "text/plain"),
+                },
+            )
+        assert burned.status_code == 200, burned.text
+        assert burned.headers.get("content-type", "").startswith("video/mp4")
+
+        # Test Wav2Lip subprocess wiring with a fake local inference.py.
+        # This deliberately does not claim to test actual AI lip-sync quality.
+        fake_wav2lip = Path(temp_dir) / "fake-wav2lip"
+        fake_wav2lip.mkdir()
+        checkpoint = fake_wav2lip / "checkpoint.pth"
+        checkpoint.write_bytes(b"test checkpoint placeholder")
+        (fake_wav2lip / "inference.py").write_text(
+            "import argparse, shutil\\n"
+            "p=argparse.ArgumentParser()\\n"
+            "p.add_argument('--checkpoint_path'); p.add_argument('--face'); "
+            "p.add_argument('--audio'); p.add_argument('--outfile')\\n"
+            "a=p.parse_args(); shutil.copyfile(a.face, a.outfile)\\n",
+            encoding="utf-8",
+        )
+        old_dir = os.environ.get("WAV2LIP_DIR")
+        old_checkpoint = os.environ.get("WAV2LIP_CHECKPOINT")
+        old_python = os.environ.get("PYTHON")
+        try:
+            os.environ["WAV2LIP_DIR"] = str(fake_wav2lip)
+            os.environ["WAV2LIP_CHECKPOINT"] = str(checkpoint)
+            os.environ["PYTHON"] = sys.executable
+            with movie_path.open("rb") as movie:
+                lip_result = client.post(
+                    "/lip-sync",
+                    files={
+                        "video": ("test-movie.mp4", movie, "video/mp4"),
+                        "dubbed_audio": ("dubbed.wav", extracted.content, "audio/wav"),
+                    },
+                )
+            assert lip_result.status_code == 200, lip_result.text
+            assert lip_result.headers.get("content-type", "").startswith("video/mp4")
+        finally:
+            for key, value in (("WAV2LIP_DIR", old_dir), ("WAV2LIP_CHECKPOINT", old_checkpoint), ("PYTHON", old_python)):
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
 print("FFmpeg integration smoke test passed: synthetic video -> mock local voice -> dubbed MP4 -> extracted WAV.")
 
 
