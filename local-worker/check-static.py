@@ -40,7 +40,9 @@ required_routes = [
     '@app.get("/system/check")',
     '@app.post("/diarize")',
     '@app.post("/translate")',
-    '@app.post("/dub-audio")',
+    '@app.post("/subtitles/srt")',
+    '@app.post("/translation/install")',
+    '@app.post("/speakers/assign")',
     '@app.post("/subtitles/burn-in")',
     '@app.post("/audio/extract")',
     '@app.get("/lip-sync/status")',
@@ -59,5 +61,13 @@ if '/.netlify/functions/create-upload' in index_source:
     raise SystemExit("Main START button must not upload videos to paid/cloud storage.")
 if 'http://127.0.0.1:8765/studio' not in index_source:
     raise SystemExit("Main START button is not connected to the local studio.")
+studio_source = STUDIO.read_text(encoding="utf-8")
+if 'Voice cloning is intentionally excluded' not in studio_source:
+    raise SystemExit("The current studio must clearly exclude voice cloning.")
+for required_ui in ('/diarize', '/translation/install', '/translate', '/subtitles/srt', '/subtitles/burn-in', '/lip-sync'):
+    if required_ui not in studio_source:
+        raise SystemExit("Missing current studio workflow stage: " + required_ui)
+if '/dub-audio' in studio_source or 'XTTS' in studio_source:
+    raise SystemExit("Voice cloning / XTTS must not be part of the current guided studio.")
 
 print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
