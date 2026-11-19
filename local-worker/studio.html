@@ -169,7 +169,7 @@ async function runLipSync(){
  setBusy($("runLipSync"),true,"CHECKING WAV2LIP...");
  try{
   const readiness=await (await checkedFetch("/lip-sync/status")).json();
-  if(!readiness.configured)throw new Error(readiness.message+" Run configure-wav2lip-windows.bat after installing the required files, then restart the worker.");
+  if(!readiness.configured)throw new Error(readiness.message+" Run setup-wav2lip-windows.bat for a fresh isolated setup, or configure-wav2lip-windows.bat if you already installed Wav2Lip, then restart the worker.");
   status("Running local Wav2Lip. Processing can take a long time on CPU...");
   const form=new FormData();form.append("video",processedVideoBlob||file,processedVideoBlob?"aslam-ai-processed.mp4":file.name);form.append("dubbed_audio",audio);
   const response=await checkedFetch("/lip-sync",{method:"POST",body:form});const blob=await response.blob();processedVideoBlob=blob;
