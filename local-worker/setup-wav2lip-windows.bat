@@ -82,6 +82,11 @@ if not exist "%S3FD_FILE%" (
   if errorlevel 1 goto failed
 )
 if not exist "%S3FD_FILE%" goto failed
+for %%A in ("%S3FD_FILE%") do if %%~zA LSS 1000000 (
+  echo ERROR: S3FD download is incomplete or invalid.
+  del "%S3FD_FILE%" >nul 2>nul
+  goto failed
+)
 
 echo.
 echo Download the official Wav2Lip checkpoint from the official weights folder:
@@ -96,6 +101,12 @@ if not exist "%WAV2LIP_CHECKPOINT%" (
 )
 if not exist "%WAV2LIP_CHECKPOINT%" (
   echo ERROR: Checkpoint file not found. Download it and rerun this setup.
+  pause
+  exit /b 1
+)
+for %%A in ("%WAV2LIP_CHECKPOINT%") do if %%~zA LSS 10000000 (
+  echo ERROR: The checkpoint file is unexpectedly small or incomplete.
+  echo Download the full official checkpoint and retry.
   pause
   exit /b 1
 )
