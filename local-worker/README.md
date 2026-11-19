@@ -146,20 +146,26 @@ The Wav2Lip model/checkpoint has licensing and usage restrictions; review the ex
 
 ## Current scope
 
-Implemented:
-1. Local video upload to worker
-2. FFmpeg audio extraction to mono 16 kHz WAV
-3. faster-whisper transcription with segment and word timestamps
-4. Local Argos Translate language-pair installation
-5. Timestamp-preserving transcript translation
-6. SRT subtitle export for original or translated dialogue
-7. Experimental local speaker grouping using SpeechBrain ECAPA embeddings\n8. Local XTTS-v2 reference-voice generation endpoint (license restrictions apply)
+Implemented in the repository (not yet locally tested end-to-end):
+1. Local video upload and FFmpeg audio extraction
+2. faster-whisper transcription with word timestamps
+3. Argos Translate local language-pair installation and translation
+4. SRT subtitle file export
+5. Experimental SpeechBrain ECAPA speaker grouping
+6. Manual speaker assignment/correction API
+7. XTTS-v2 reference-voice generation API
+8. Timestamp-based dialogue generation and original soundtrack mixing
+9. MP4 audio muxing with FFmpeg
+10. SRT subtitle burn-in with FFmpeg
+11. Optional Wav2Lip integration wrapper (requires separate model/checkpoint setup)
 
-Still to build:
-- Speaker diarization and manual speaker review
-- Free local text-to-speech and authorized voice cloning
-- Speech/music separation and audio mixing
-- Lip-sync
-- Final MP4 rendering and subtitle burn-in
+Remaining product work:
+- Connect the web interface to the local worker and provide a guided end-to-end workflow
+- Add a graphical speaker review and voice assignment interface
+- Add speech/music separation and more reliable dialogue overlap/duration fitting
+- Test dependency compatibility, model downloads, and full movie processing on the target computer
+- Improve job progress, cancellation, storage management and large-file streaming
 
+Important: the Wav2Lip endpoint is only an integration wrapper. The model repository, Python dependencies and checkpoint must be installed separately. No end-to-end run has been performed yet.
+ 
 Do not expose this worker directly to the public internet without authentication and upload limits.
