@@ -69,4 +69,8 @@ for required_ui in ('/diarize', '/translation/install', '/translate', '/subtitle
 if '/dub-audio' in studio_source or 'XTTS' in studio_source or 'generateDub' in studio_source:
     raise SystemExit("Voice cloning / XTTS must not be part of the current guided studio.")
 
+wav_helper = (ROOT / "configure-wav2lip-windows.bat").read_text(encoding="utf-8")
+if "WAV2LIP_PYTHON" not in wav_helper or "setx PYTHON" not in wav_helper:
+    raise SystemExit("Wav2Lip setup helper must support a separate Python environment.")
+
 print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
