@@ -160,8 +160,9 @@ if ffmpeg:
                     os.environ.pop(key, None)
                 else:
                     os.environ[key] = value
+        print("Wav2Lip subprocess wiring test passed with a fake inference script.")
 
-print("FFmpeg integration smoke test passed: synthetic video -> mock local voice -> dubbed MP4 -> extracted WAV.")
+print("FFmpeg integration smoke test passed: synthetic video -> Whisper upload path -> subtitle export/burn-in -> mocked Wav2Lip invocation.")
 
 
 # Verify real Argos route selection logic with lightweight fake language models.
