@@ -85,5 +85,7 @@ if "setx PYTHON " in wav2lip_setup:
 wav_helper = (ROOT / "configure-wav2lip-windows.bat").read_text(encoding="utf-8")
 if "WAV2LIP_PYTHON" not in wav_helper or "setx WAV2LIP_PYTHON" not in wav_helper:
     raise SystemExit("Wav2Lip setup helper must support a separate Python environment.")
+if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
+    raise SystemExit("Wav2Lip configuration must verify its separate runtime dependencies.")
 
 print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
