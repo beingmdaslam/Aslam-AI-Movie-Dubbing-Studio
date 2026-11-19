@@ -1137,8 +1137,11 @@ def run_wav2lip_subprocess(command, repo_path):
 
 
 def resolve_wav2lip_python():
-    """Resolve the optional separate Wav2Lip interpreter, or use this worker's Python."""
-    configured = os.getenv("PYTHON", "").strip()
+    """Resolve a dedicated Wav2Lip interpreter without changing the main worker Python."""
+    configured = (
+        os.getenv("WAV2LIP_PYTHON", "").strip()
+        or os.getenv("PYTHON", "").strip()  # legacy compatibility with earlier setup
+    )
     if not configured:
         return sys.executable
     candidate = Path(configured).expanduser()
