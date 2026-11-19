@@ -1,4 +1,6 @@
 """Fast, model-free API smoke tests. Heavy AI models are deliberately not downloaded in CI."""
+import os
+import sys
 from fastapi.testclient import TestClient
 import worker
 import io
