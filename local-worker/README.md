@@ -83,6 +83,10 @@ Example:
 
 The response keeps segment timestamps and includes the original text in `sourceText`. Human review is recommended before generating voices.
 
+## 4. Export subtitle files
+
+Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
+
 ## Current scope
 
 Implemented:
@@ -91,6 +95,7 @@ Implemented:
 3. faster-whisper transcription with segment and word timestamps
 4. Local Argos Translate language-pair installation
 5. Timestamp-preserving transcript translation
+6. SRT subtitle export for original or translated dialogue
 
 Still to build:
 - Speaker diarization and manual speaker review
