@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 import argostranslate.package
 import argostranslate.translate
@@ -42,6 +43,11 @@ class TranslationRequest(BaseModel):
 class InstallTranslationRequest(BaseModel):
     sourceLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
     targetLanguage: str = Field(min_length=2, max_length=10, pattern=r"^[a-z]{2,3}$")
+
+
+class SubtitleRequest(BaseModel):
+    segments: list[dict] = Field(min_length=1, max_length=10000)
+    useSourceText: bool = False
 
 
 def get_model():
@@ -284,4 +290,53 @@ def translate_segments(request: TranslationRequest):
         "segments": translated,
         "note": "Timestamps and word alignment are retained from the source transcript. Review translated dialogue before voice generation.",
     }
+
+def srt_timestamp(seconds):
+    milliseconds = max(0, round(float(seconds) * 1000))
+    hours, remainder = divmod(milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    whole_seconds, millis = divmod(remainder, 1000)
+    return f"{hours:02}:{minutes:02}:{whole_seconds:02},{millis:03}"
+
+
+@app.post("/subtitles/srt", response_class=PlainTextResponse)
+def create_srt(request: SubtitleRequest):
+    lines = []
+    for index, segment in enumerate(request.segments, start=1):
+        try:
+            start = float(segment["start"])
+            end = float(segment["end"])
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {index} has invalid start/end timestamps.",
+            )
+
+        if start < 0 or end <= start:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {index} has an invalid time range.",
+            )
+
+        text_value = segment.get(
+            "sourceText" if request.useSourceText else "text"
+        )
+        if not isinstance(text_value, str) or not text_value.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {index} has no subtitle text.",
+            )
+
+        lines.extend([
+            str(index),
+            f"{srt_timestamp(start)} --> {srt_timestamp(end)}",
+            text_value.strip(),
+            "",
+        ])
+
+    return PlainTextResponse(
+        "\\n".join(lines),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="aslam-ai-subtitles.srt"'},
+    )
 
