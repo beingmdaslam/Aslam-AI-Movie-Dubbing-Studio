@@ -24,13 +24,13 @@ echo Checking Python and studio files...
 if errorlevel 1 goto failed
 
 echo.
-echo Running local API and synthetic video/audio pipeline test...
+echo Running local API, transcription, subtitle and lip-sync wiring tests...
 ".venv\Scripts\python.exe" check-runtime.py
 if errorlevel 1 goto failed
 
 echo.
 echo SUCCESS: Local API and FFmpeg media pipeline checks passed.
-echo NOTE: This self-test uses a synthetic test voice. It does not download or test Whisper, SpeechBrain or XTTS AI models.
+echo NOTE: This uses synthetic media and fake model adapters. It does not validate real Whisper, SpeechBrain, Argos or Wav2Lip model inference.
 pause
 exit /b 0
 
