@@ -12,6 +12,9 @@ This worker runs on the user's own computer. It uses FFmpeg, faster-whisper and 
 
 ## Requirements
 
+The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis or voice generation, so missing components are reported before a long video upload begins.
+
+
 - Python 3.10 or 3.11
 - FFmpeg installed and available in PATH
 - 8 GB RAM minimum recommended for the Whisper small model
@@ -189,3 +192,7 @@ Do not expose this worker directly to the public internet without authentication
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
 The local guided studio at `/studio` is served by this worker. It runs the local analysis → translation → speaker review → voice sample assignment → dubbing → subtitle burn-in flow. The updated `index.html` START button opens this local studio in a new tab; because browsers do not transfer a selected file between pages, select the movie again in the local studio. This index change is committed to GitHub but has not been deployed to Netlify. The currently deployed site will keep its previous behavior until you explicitly authorize a deployment.
+
+## Automated checks
+
+GitHub Actions runs Python/HTML/JavaScript static checks plus model-free API smoke tests for worker startup, `/health`, `/studio`, `/system/check`, and same-language translation. These checks do not download large AI models and do not replace a real end-to-end movie dubbing test on the target computer.
