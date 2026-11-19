@@ -179,7 +179,7 @@ Do not expose this worker directly to the public internet without authentication
 
 ## Windows helper files
 
-- `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
+- `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.\n- `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
