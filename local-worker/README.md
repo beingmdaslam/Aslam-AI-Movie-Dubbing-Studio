@@ -104,9 +104,9 @@ Automatic diarization is approximate: short utterances may be marked `speaker_un
 
 Use `POST /speakers/assign` with the transcript segments and an `assignments` object mapping detected IDs to the final character IDs. Example: `{\"segments\":[{\"start\":1,\"end\":2,\"text\":\"Hello\",\"speakerId\":\"speaker_01\"}],\"assignments\":{\"speaker_01\":\"hero\",\"speaker_unknown\":\"hero\"}}`. The response returns corrected segments; use those for subtitle export and review.
 
-## 6. Generate dialogue with a reference voice (XTTS-v2)
+## Legacy API only — voice cloning (XTTS-v2; excluded from the current guided studio)
 
-The local `POST /tts/clone` endpoint accepts multipart form fields `text` and `language`, plus a `reference_audio` file (WAV/MP3/M4A/FLAC/OGG, up to 20 MB). It returns a WAV file generated to resemble the supplied voice sample. Check supported language codes with `GET /tts/languages`. Hindi (`hi`), Arabic (`ar`) and English (`en`) are included by the model; quality varies and each language should be tested.
+This older API is retained for compatibility only and is not used by the current steps 2–5 studio workflow. The local `POST /tts/clone` endpoint accepts multipart form fields `text` and `language`, plus a `reference_audio` file (WAV/MP3/M4A/FLAC/OGG, up to 20 MB). It returns a WAV file generated to resemble the supplied voice sample. Check supported language codes with `GET /tts/languages`. Hindi (`hi`), Arabic (`ar`) and English (`en`) are included by the model; quality varies and each language should be tested.
 
 Install the optional dependency first with `pip install -r requirements-voice.txt`. The first request downloads the XTTS-v2 model and can take time and substantial disk space. CPU generation may be slow. Use only voice recordings you own or have explicit permission to use; never clone someone else's voice without consent. XTTS-v2 model weights are governed by the Coqui Public Model License, which has restrictions including non-commercial use; check that license before any commercial/public deployment. The software and model download do not require a paid API, but this does not mean the model is cleared for every use.
 
@@ -115,7 +115,7 @@ Example multipart fields in `/docs`:
 - `language`: `hi`
 - `reference_audio`: a clean voice sample
 
-## 7. Render character voices into the movie
+## Legacy API only — render generated dialogue into a movie
 
 `POST /dub-audio` creates each dialogue line with XTTS-v2 using the voice sample assigned to that segment's `speakerId`, delays the line to its `start` timestamp, mixes all generated dialogue with the original soundtrack, and returns an MP4. The video stream is copied without re-encoding; audio is encoded as AAC.
 
