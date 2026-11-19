@@ -1129,13 +1129,16 @@ def lip_sync_status():
     checkpoint_path = Path(checkpoint).expanduser() if checkpoint else None
     inference_exists = bool(repo_path and (repo_path / "inference.py").is_file())
     checkpoint_exists = bool(checkpoint_path and checkpoint_path.is_file())
+    face_detector_exists = bool(repo_path and (repo_path / "face_detection" / "detection" / "sfd" / "s3fd.pth").is_file())
     python_path = resolve_wav2lip_python()
     python_exists = bool(python_path)
-    configured = inference_exists and checkpoint_exists and python_exists
+    configured = inference_exists and checkpoint_exists and face_detector_exists and python_exists
     if not inference_exists:
         message = "Wav2Lip needs a local repository containing inference.py."
     elif not checkpoint_exists:
         message = "Wav2Lip needs a compatible local checkpoint file."
+    elif not face_detector_exists:
+        message = "Wav2Lip needs S3FD face-detection weights at face_detection/detection/sfd/s3fd.pth."
     elif not python_exists:
         message = "The configured Wav2Lip Python executable was not found. Check the PYTHON setting."
     else:
@@ -1145,6 +1148,7 @@ def lip_sync_status():
         "configured": configured,
         "repositoryFound": inference_exists,
         "checkpointFound": checkpoint_exists,
+        "faceDetectorFound": face_detector_exists,
         "pythonFound": python_exists,
         "pythonExecutable": python_path,
         "message": message + " No model is bundled or downloaded automatically.",
@@ -1174,6 +1178,9 @@ async def lip_sync(
             status_code=503,
             detail="Wav2Lip inference.py or checkpoint file was not found at the configured path.",
         )
+    face_detector_path = repo_path / "face_detection" / "detection" / "sfd" / "s3fd.pth"
+    if not face_detector_path.is_file():
+        raise HTTPException(status_code=503, detail="Wav2Lip S3FD face-detection weights are missing. Place s3fd.pth at face_detection/detection/sfd/s3fd.pth.")
 
     video_name = Path(video.filename or "face-video.mp4").name
     video_suffix = Path(video_name).suffix.lower()
@@ -1215,6 +1222,7 @@ async def lip_sync(
             if audio_size == 0:
                 raise HTTPException(status_code=400, detail="Dubbed audio is empty.")
 
+            (repo_path / "temp").mkdir(parents=True, exist_ok=True)
             command = [
                 resolve_wav2lip_python() or sys.executable,
                 str(inference_script),
