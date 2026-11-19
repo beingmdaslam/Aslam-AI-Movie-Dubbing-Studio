@@ -147,7 +147,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 
 ## 10. Optional local lip-sync (Wav2Lip)
 
-`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `GET /lip-sync/status` checks for the local repository and checkpoint before any expensive dubbing begins. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The current local studio exposes a separate upload field for an already dubbed audio file and a Wav2Lip action. It does not generate or clone voices. The studio checks whether the separate model/checkpoint is configured before starting inference. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
+`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `GET /lip-sync/status` checks for the local repository and checkpoint before lip-sync inference begins. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The current local studio exposes a separate upload field for an already dubbed audio file and a Wav2Lip action. It does not generate or clone voices. The studio checks whether the separate model/checkpoint is configured before starting inference. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
 
 - `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
@@ -155,28 +155,25 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 
 The Wav2Lip model/checkpoint has licensing and usage restrictions; review the exact repository and checkpoint license before use, especially for commercial projects. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
 
-## Current scope
+## Current guided workflow (requested scope: steps 2–5)
 
-Implemented in the repository (not yet locally tested end-to-end):
-1. Local video upload and FFmpeg audio extraction
-2. faster-whisper transcription with word timestamps
-3. Argos Translate local language-pair installation and translation
-4. SRT subtitle file export
-5. Experimental SpeechBrain ECAPA speaker grouping
-6. Manual speaker assignment/correction API
-7. XTTS-v2 reference-voice generation API
-8. Timestamp-based dialogue generation and original soundtrack mixing
-9. MP4 audio muxing with FFmpeg
-10. SRT subtitle burn-in with FFmpeg
-11. Optional Wav2Lip integration wrapper (requires separate model/checkpoint setup)
+The guided studio currently includes:
+1. faster-whisper transcription with detected language, segment timing and word timestamps
+2. SpeechBrain ECAPA speaker grouping with manual speaker reassignment/review
+3. Argos Translate local model installation and dialogue translation
+4. SRT subtitle export and FFmpeg subtitle burn-in
+5. Optional Wav2Lip integration using an audio file supplied separately by the user
 
-Remaining limitations and work:
-- The complete movie pipeline has not yet been run end-to-end on the target computer.
-- First-time model downloads, dependency compatibility and actual CPU processing time still need validation on that computer.
-- Dialogue duration fitting is basic: long generated lines can overlap later dialogue.
-- Speaker detection is experimental and should be reviewed manually.
+Voice cloning / XTTS is intentionally excluded from the current guided studio. The user must supply an already dubbed audio file to run Wav2Lip; this workflow does not synthesize or clone a voice. Subtitle burn-in and Wav2Lip can be chained: each action uses the latest processed video.
+
+## Validation and limitations
+
+- GitHub Actions tests cover application routes and FFmpeg plumbing with fake models; they do not prove actual AI model quality.
+- The complete real-model workflow still needs a test on the target Windows computer.
+- First-time Whisper, SpeechBrain and Argos model downloads require internet and disk space; CPU processing can be slow.
+- Speaker detection is experimental. Short utterances may be unknown and similar voices can be grouped incorrectly; review the labels.
+- Wav2Lip remains an integration wrapper requiring a separate repository, compatible dependencies and checkpoint. No real checkpoint inference has been completed.
 - Improve job progress, cancellation, storage management and large-file streaming.
-- Wav2Lip remains an optional integration wrapper requiring a separate repository, dependencies and checkpoint.
 
 Important: the Wav2Lip endpoint is only an integration wrapper. The model repository, Python dependencies and checkpoint must be installed separately. No end-to-end run has been performed yet.
  
