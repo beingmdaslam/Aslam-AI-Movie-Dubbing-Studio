@@ -3,3 +3,5 @@ uvicorn[standard]==0.34.2
 python-multipart==0.0.20
 faster-whisper==1.1.1
 argostranslate>=1.9,<2
+speechbrain==1.0.3
+torchaudio>=2.2,<3
