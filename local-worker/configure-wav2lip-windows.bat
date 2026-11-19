@@ -44,6 +44,14 @@ if not exist "%WAV2LIP_PYTHON%" (
   pause
   exit /b 1
 )
+echo Checking the separate Wav2Lip Python dependencies...
+"%WAV2LIP_PYTHON%" -c "import torch, torchvision, cv2, librosa, numpy; print('torch',torch.__version__,'opencv',cv2.__version__,'librosa',librosa.__version__,'numpy',numpy.__version__)"
+if errorlevel 1 (
+  echo ERROR: Wav2Lip dependencies are incomplete in that Python environment.
+  echo Run setup-wav2lip-windows.bat or install the compatible packages separately.
+  pause
+  exit /b 1
+)
 
 setx WAV2LIP_DIR "%WAV2LIP_DIR%" >nul
 if errorlevel 1 (
@@ -61,7 +69,7 @@ if errorlevel 1 (
 if not "%WAV2LIP_PYTHON%"=="" (
   setx WAV2LIP_PYTHON "%WAV2LIP_PYTHON%" >nul
   if errorlevel 1 (
-    echo ERROR: Could not save PYTHON.
+    echo ERROR: Could not save WAV2LIP_PYTHON.
     pause
     exit /b 1
   )
