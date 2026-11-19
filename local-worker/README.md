@@ -195,4 +195,4 @@ The local guided studio at `/studio` is served by this worker. It runs the local
 
 ## Automated checks
 
-GitHub Actions runs Python/HTML/JavaScript static checks plus model-free API smoke tests for worker startup, `/health`, `/studio`, `/system/check`, and same-language translation. These checks do not download large AI models and do not replace a real end-to-end movie dubbing test on the target computer.
+GitHub Actions runs Python/HTML/JavaScript static checks plus model-free integration tests for worker startup, `/health`, `/studio`, `/system/check`, FFmpeg audio extraction, the Whisper upload/response path (with a fake model), direct and English-pivot Argos route execution (with fake language models), speaker-embedding clustering logic, the synthetic dubbed-MP4/audio-extraction pipeline, and Wav2Lip's unconfigured-state response. These tests validate the application plumbing without downloading large AI models. They do not prove real Whisper, SpeechBrain, Argos model quality, or Wav2Lip checkpoint inference; those still require the local model files and a real test movie on the target computer.
