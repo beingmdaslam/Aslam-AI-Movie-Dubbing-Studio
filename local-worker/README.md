@@ -12,7 +12,7 @@ This worker runs on the user's own computer. It uses FFmpeg, faster-whisper and 
 
 ## Requirements
 
-The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis or voice generation, so missing components are reported before a long video upload begins.
+The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis, so missing components are reported before a long video upload begins. The current guided studio excludes XTTS voice cloning.
 
 
 - Python 3.10 or 3.11
@@ -22,7 +22,7 @@ The API can now start and serve its health check and studio page even before opt
 
 ## Install
 
-**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages and offers an optional FFmpeg installation through Windows Package Manager (winget) if FFmpeg is missing. XTTS and Wav2Lip models remain optional separate installs. After setup, you can double-click `test-pipeline-windows.bat` to run a local API and synthetic video/audio export self-test before using a real movie. This self-test uses a test voice and does not verify AI model inference.
+**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages and offers an optional FFmpeg installation through Windows Package Manager (winget) if FFmpeg is missing. XTTS voice cloning is not part of the current guided studio. Wav2Lip remains a separate optional local model. After setup, you can double-click `test-pipeline-windows.bat` to run a local API and synthetic video/audio export self-test before using a real movie. This self-test uses a test voice and does not verify AI model inference.
 
 Manual setup:
 
@@ -98,11 +98,11 @@ The response keeps segment timestamps and includes the original text in `sourceT
 
 Call `POST /diarize` and upload a video. The worker extracts audio, transcribes it and uses the local SpeechBrain ECAPA voice-embedding model to group similar utterances into `speaker_01`, `speaker_02`, etc. It returns transcript timestamps and speaker labels. First use downloads the model. CPU inference can be slow.
 
-Automatic diarization is approximate: short utterances may be marked `speaker_unknown`, and similar-sounding characters may be grouped together. Review and correct speaker labels before assigning cloned/generated voices. It does not identify a real person's identity.
+Automatic diarization is approximate: short utterances may be marked `speaker_unknown`, and similar-sounding characters may be grouped together. Review and correct speaker labels before exporting subtitles or using an externally supplied dubbed audio track. It does not identify a real person's identity.
 
 ## 5. Review and correct speaker labels
 
-Use `POST /speakers/assign` with the transcript segments and an `assignments` object mapping detected IDs to the final character IDs. Example: `{\"segments\":[{\"start\":1,\"end\":2,\"text\":\"Hello\",\"speakerId\":\"speaker_01\"}],\"assignments\":{\"speaker_01\":\"hero\",\"speaker_unknown\":\"hero\"}}`. The response returns corrected segments; use those in `/dub-audio`.
+Use `POST /speakers/assign` with the transcript segments and an `assignments` object mapping detected IDs to the final character IDs. Example: `{\"segments\":[{\"start\":1,\"end\":2,\"text\":\"Hello\",\"speakerId\":\"speaker_01\"}],\"assignments\":{\"speaker_01\":\"hero\",\"speaker_unknown\":\"hero\"}}`. The response returns corrected segments; use those for subtitle export and review.
 
 ## 6. Generate dialogue with a reference voice (XTTS-v2)
 
@@ -147,7 +147,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 
 ## 10. Optional local lip-sync (Wav2Lip)
 
-`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `GET /lip-sync/status` checks for the local repository and checkpoint before any expensive dubbing begins. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The local studio exposes this as an optional checkbox; it is skipped with a clear status if the separate model/checkpoint is not configured. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
+`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `GET /lip-sync/status` checks for the local repository and checkpoint before any expensive dubbing begins. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The current local studio exposes a separate upload field for an already dubbed audio file and a Wav2Lip action. It does not generate or clone voices. The studio checks whether the separate model/checkpoint is configured before starting inference. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
 
 - `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
@@ -192,7 +192,7 @@ Do not expose this worker directly to the public internet without authentication
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
-The local guided studio at `/studio` is served by this worker. It runs the local analysis → translation → speaker review → voice sample assignment → dubbing → subtitle burn-in flow. The updated `index.html` START button opens this local studio in a new tab; because browsers do not transfer a selected file between pages, select the movie again in the local studio. This index change is committed to GitHub but has not been deployed to Netlify. The currently deployed site will keep its previous behavior until you explicitly authorize a deployment.
+The local guided studio at `/studio` is served by this worker. Its current guided flow is local transcription → speaker grouping → Argos translation → manual dialogue/speaker review → SRT export or subtitle burn-in. Optional Wav2Lip accepts a separately supplied dubbed audio file. Voice cloning and XTTS are intentionally excluded from the current guided studio. The updated `index.html` START button opens this local studio in a new tab; because browsers do not transfer a selected file between pages, select the movie again in the local studio. This index change is committed to GitHub but has not been deployed to Netlify. The currently deployed site will keep its previous behavior until you explicitly authorize a deployment.
 
 ## Automated checks
 
