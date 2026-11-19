@@ -146,6 +146,7 @@ if ffmpeg:
                 sys.modules.pop("torchaudio", None)
             else:
                 sys.modules["torchaudio"] = old_torchaudio
+        print("Speaker diarization route test passed with fake Whisper, audio and embedding models.")
 
         # Create a synthetic already-dubbed WAV for the optional lip-sync integration test.
         lip_audio_buffer = io.BytesIO()
