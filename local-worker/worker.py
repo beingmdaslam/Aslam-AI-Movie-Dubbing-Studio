@@ -861,3 +861,103 @@ async def burn_in_subtitles(
             await video.close()
             await subtitles.close()
 
+@app.post("/lip-sync")
+async def lip_sync(
+    video: UploadFile = File(...),
+    dubbed_audio: UploadFile = File(...),
+):
+    """Run a separately installed local Wav2Lip checkout using its supplied checkpoint."""
+    wav2lip_dir = os.getenv("WAV2LIP_DIR", "").strip()
+    checkpoint = os.getenv("WAV2LIP_CHECKPOINT", "").strip()
+    if not wav2lip_dir or not checkpoint:
+        raise HTTPException(
+            status_code=503,
+            detail="Wav2Lip is not configured. Set WAV2LIP_DIR and WAV2LIP_CHECKPOINT after installing its model.",
+        )
+
+    repo_path = Path(wav2lip_dir).expanduser().resolve()
+    inference_script = repo_path / "inference.py"
+    checkpoint_path = Path(checkpoint).expanduser().resolve()
+    if not inference_script.is_file() or not checkpoint_path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="Wav2Lip inference.py or checkpoint file was not found at the configured path.",
+        )
+
+    video_name = Path(video.filename or "face-video.mp4").name
+    video_suffix = Path(video_name).suffix.lower()
+    audio_suffix = Path(dubbed_audio.filename or "dubbed.wav").suffix.lower()
+    if video_suffix not in {".mp4", ".mov", ".mkv", ".avi", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Unsupported face video format.")
+    if audio_suffix not in {".wav", ".mp3", ".m4a", ".flac"}:
+        raise HTTPException(status_code=400, detail="Dubbed audio must be WAV, MP3, M4A or FLAC.")
+
+    with tempfile.TemporaryDirectory(prefix="aslam-lipsync-") as temp_dir:
+        root = Path(temp_dir)
+        video_path = root / video_name
+        audio_path = root / f"dubbed{audio_suffix}"
+        output_path = root / "aslam-ai-lipsynced.mp4"
+        try:
+            video_size = 0
+            with video_path.open("wb") as output:
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    video_size += len(chunk)
+                    if video_size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Local worker limit is 1 GB.")
+                    output.write(chunk)
+            if video_size == 0:
+                raise HTTPException(status_code=400, detail="Video file is empty.")
+
+            audio_size = 0
+            with audio_path.open("wb") as output:
+                while True:
+                    chunk = await dubbed_audio.read(256 * 1024)
+                    if not chunk:
+                        break
+                    audio_size += len(chunk)
+                    if audio_size > 200 * 1024 * 1024:
+                        raise HTTPException(status_code=413, detail="Dubbed audio limit is 200 MB.")
+                    output.write(chunk)
+            if audio_size == 0:
+                raise HTTPException(status_code=400, detail="Dubbed audio is empty.")
+
+            command = [
+                os.getenv("PYTHON", "python"),
+                str(inference_script),
+                "--checkpoint_path", str(checkpoint_path),
+                "--face", str(video_path),
+                "--audio", str(audio_path),
+                "--outfile", str(output_path),
+            ]
+            result = subprocess.run(
+                command, cwd=str(repo_path), capture_output=True, text=True,
+                timeout=6 * 60 * 60,
+            )
+            if result.returncode != 0 or not output_path.exists():
+                print("Wav2Lip error:", result.stderr[-3000:])
+                raise HTTPException(
+                    status_code=500,
+                    detail="Lip-sync failed. Check Wav2Lip dependencies, checkpoint and worker logs.",
+                )
+
+            return Response(
+                content=output_path.read_bytes(),
+                media_type="video/mp4",
+                headers={
+                    "Content-Disposition": 'attachment; filename="aslam-ai-lipsynced.mp4"'
+                },
+            )
+        except HTTPException:
+            raise
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=408, detail="Lip-sync processing timed out.")
+        except Exception as exc:
+            print("Lip-sync pipeline error:", repr(exc))
+            raise HTTPException(status_code=500, detail="Lip-sync processing failed.")
+        finally:
+            await video.close()
+            await dubbed_audio.close()
+
