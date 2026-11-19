@@ -151,6 +151,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 
 - `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
+- Face detector weights: `WAV2LIP_DIR/face_detection/detection/sfd/s3fd.pth` (the official repository requires this S3FD file)
 - `PYTHON`: optional full path to the Python executable inside the separate Wav2Lip environment. If unset, the worker's current Python executable is used.
 
 The upstream open-source Wav2Lip repository states that its code and model are for personal/research/non-commercial use only; commercial use is prohibited. Review the [official license/disclaimer](https://github.com/Rudrabha/Wav2Lip#license-and-citation) before use. This integration does not use the paid Sync API. Its published requirements pin older packages including PyTorch 1.1.0, torchvision 0.3.0 and NumPy 1.17.1; keep Wav2Lip in a separate compatible Python environment instead of installing these into the main ASLAM AI worker environment. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
@@ -185,7 +186,7 @@ Do not expose this worker directly to the public internet without authentication
 - `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
 - `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
 - `install-voice-windows.bat` installs optional XTTS voice generation after asking for confirmation and reminding you to review its license.
-- `configure-wav2lip-windows.bat` validates an existing Wav2Lip checkout and checkpoint, optionally saves a separate Wav2Lip Python executable, then stores the paths as Windows user environment variables. It does not download the model or checkpoint.
+- `configure-wav2lip-windows.bat` validates an existing Wav2Lip checkout, main checkpoint and S3FD face detector file, optionally saves a separate Wav2Lip Python executable, then stores the paths as Windows user environment variables. It does not download any model weights.
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
