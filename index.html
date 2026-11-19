@@ -15,6 +15,7 @@ main{max-width:850px;margin:auto;padding:15px}
 .feature{background:linear-gradient(145deg,#191919,#0d0d0d);border:1px solid #552020;border-radius:17px;padding:20px 10px;text-align:center;box-shadow:0 0 15px #650b0b33}
 .feature.video-feature{cursor:pointer;transition:border-color .2s,box-shadow .2s}
 .feature.video-feature:focus-visible{outline:2px solid #ff4545;outline-offset:3px}
+.select-video-label{display:block;position:relative;text-align:center;cursor:pointer;user-select:none}
 .feature.video-feature:active{border-color:#ff4545;box-shadow:0 0 20px #ff202066}
 .icon{font-size:38px;display:block;margin-bottom:12px}
 .movie{animation:bounce 1.5s infinite}
@@ -33,10 +34,10 @@ h2{font-size:19px;color:#ff4545;margin-top:0}
 label{display:block;margin:15px 0 8px;color:#ddd;font-size:14px}
 select{width:100%;padding:13px;background:#090909;color:white;border:1px solid #8c2929;border-radius:9px;font-size:15px}
 .upload{border:1px dashed #ff3333;padding:18px;border-radius:12px;text-align:center;margin-top:15px}
-#selectVideoButton{width:100%;padding:15px;margin:0;border:1px solid #ff4545;border-radius:10px;background:linear-gradient(90deg,#650000,#b91c1c);color:white;font-size:15px;font-weight:bold;cursor:pointer}
+#selectVideoButton{display:block;width:100%;padding:15px;margin:0;border:1px solid #ff4545;border-radius:10px;background:linear-gradient(90deg,#650000,#b91c1c);color:white;font-size:15px;font-weight:bold;cursor:pointer}
 #selectVideoButton:active{transform:scale(.99)}
-/* Keep the file input available to mobile browsers while visually hiding it. */
-#videoFile{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* The file input is activated by its visible labels. This works more reliably on Android than a scripted click on a clipped input. */
+#videoFile{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0;opacity:0}
 video{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain;margin-top:15px;border-radius:10px;background:#000}
 .note{font-size:12px;color:#aaa;line-height:1.5}
 #videoInfo{font-size:12px;color:#ccc;line-height:1.7;margin-top:10px;overflow-wrap:anywhere}
@@ -58,11 +59,11 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 
 <main>
 <section class="features">
-<div class="feature video-feature" id="videoUploadCard" role="button" tabindex="0" aria-label="Open video gallery to select a movie or video">
+<label class="feature video-feature" id="videoUploadCard" for="videoFile" tabindex="0" aria-label="Open video gallery to select a movie or video">
 <span class="icon movie">🎬</span>
 <h3>Video Upload</h3>
 <p>Tap to select Movie / Video</p>
-</div>
+</label>
 <div class="feature">
 <span class="icon globe">🌍</span>
 <h3>Multi Language</h3>
@@ -114,7 +115,7 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 </select>
 
 <div class="upload">
-<button type="button" id="selectVideoButton">📁 Select Movie / Video</button>
+<label class="select-video-label" id="selectVideoButton" for="videoFile">📁 Select Movie / Video</label>
 <input type="file" id="videoFile" accept="video/*,.mkv,.mov,.mp4,.webm">
 <video id="preview" controls playsinline webkit-playsinline preload="metadata" hidden></video>
 <div id="videoInfo" aria-live="polite">No video selected yet.</div>
@@ -190,8 +191,6 @@ function openGallery() {
   fileInput.click();
 }
 
-selectVideoButton.addEventListener("click", openGallery);
-videoUploadCard.addEventListener("click", openGallery);
 videoUploadCard.addEventListener("keydown", function(event) {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
