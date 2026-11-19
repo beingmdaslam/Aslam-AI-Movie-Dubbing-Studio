@@ -339,11 +339,27 @@ def translate_segments(request: TranslationRequest):
             detail="One or both language models are missing. Install the language pair first.",
         )
 
-    translator = source.get_translation(target)
-    if translator is None:
+    # Argos language objects expose direct model links. Build the same
+    # direct-or-English-pivot route that /translation/install prepares.
+    route = []
+    direct = source.get_translation(target)
+    if direct is not None:
+        route = [direct]
+    elif request.sourceLanguage != "en" and request.targetLanguage != "en":
+        english = next(
+            (language for language in installed if language.code == "en"),
+            None,
+        )
+        if english is not None:
+            first_leg = source.get_translation(english)
+            second_leg = english.get_translation(target)
+            if first_leg is not None and second_leg is not None:
+                route = [first_leg, second_leg]
+
+    if not route:
         raise HTTPException(
             status_code=409,
-            detail="No installed translation route exists for this language pair.",
+            detail="No installed direct or English-pivot translation route exists for this language pair. Install the pair first.",
         )
 
     translated = []
@@ -355,7 +371,9 @@ def translate_segments(request: TranslationRequest):
                 detail=f"Segment {index} has no valid text.",
             )
         try:
-            translated_text = translator.translate(text)
+            translated_text = text
+            for translator in route:
+                translated_text = translator.translate(translated_text)
         except Exception as exc:
             print("Segment translation error:", repr(exc))
             raise HTTPException(
