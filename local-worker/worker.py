@@ -234,6 +234,25 @@ def translation_languages():
     }
 
 
+def _installed_translation_route(source_code, target_code, installed_languages):
+    """Return installed direct or English-pivot translators, or None."""
+    source = next((item for item in installed_languages if item.code == source_code), None)
+    target = next((item for item in installed_languages if item.code == target_code), None)
+    if source is None or target is None:
+        return None
+    direct = source.get_translation(target)
+    if direct is not None:
+        return [direct]
+    if source_code != "en" and target_code != "en":
+        english = next((item for item in installed_languages if item.code == "en"), None)
+        if english is not None:
+            first = source.get_translation(english)
+            second = english.get_translation(target)
+            if first is not None and second is not None:
+                return [first, second]
+    return None
+
+
 @app.post("/translation/install")
 def install_translation_pair(request: InstallTranslationRequest):
     try:
@@ -244,6 +263,27 @@ def install_translation_pair(request: InstallTranslationRequest):
         raise HTTPException(status_code=400, detail="Choose two different languages.")
 
     try:
+        # Language presence alone does not mean the requested pair is installed.
+        # Return early only when a usable direct or English-pivot route exists.
+        try:
+            import argostranslate.translate
+            existing_languages = argostranslate.translate.get_installed_languages()
+            existing_route = _installed_translation_route(
+                request.sourceLanguage, request.targetLanguage, existing_languages
+            )
+            if existing_route:
+                return {
+                    "ok": True,
+                    "installed": True,
+                    "alreadyInstalled": True,
+                    "sourceLanguage": request.sourceLanguage,
+                    "targetLanguage": request.targetLanguage,
+                    "installedPairs": [],
+                    "route": "direct" if len(existing_route) == 1 else "via English",
+                    "message": "A usable local translation route is already installed.",
+                }
+        except ImportError:
+            pass
         argostranslate.package.update_package_index()
         packages = argostranslate.package.get_available_packages()
         # Prefer a direct model. If Argos does not publish one, try a
@@ -326,37 +366,9 @@ def translate_segments(request: TranslationRequest):
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="Argos Translate is not installed. Run setup-windows.bat.") from exc
     installed = argostranslate.translate.get_installed_languages()
-    source = next(
-        (language for language in installed if language.code == request.sourceLanguage),
-        None,
+    route = _installed_translation_route(
+        request.sourceLanguage, request.targetLanguage, installed
     )
-    target = next(
-        (language for language in installed if language.code == request.targetLanguage),
-        None,
-    )
-
-    if source is None or target is None:
-        raise HTTPException(
-            status_code=409,
-            detail="One or both language models are missing. Install the language pair first.",
-        )
-
-    # Argos language objects expose direct model links. Build the same
-    # direct-or-English-pivot route that /translation/install prepares.
-    route = []
-    direct = source.get_translation(target)
-    if direct is not None:
-        route = [direct]
-    elif request.sourceLanguage != "en" and request.targetLanguage != "en":
-        english = next(
-            (language for language in installed if language.code == "en"),
-            None,
-        )
-        if english is not None:
-            first_leg = source.get_translation(english)
-            second_leg = english.get_translation(target)
-            if first_leg is not None and second_leg is not None:
-                route = [first_leg, second_leg]
 
     if not route:
         raise HTTPException(
