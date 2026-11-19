@@ -212,6 +212,9 @@ import os
 old_wav2lip_dir = os.environ.pop("WAV2LIP_DIR", None)
 old_wav2lip_checkpoint = os.environ.pop("WAV2LIP_CHECKPOINT", None)
 try:
+    lip_status = client.get("/lip-sync/status")
+    assert lip_status.status_code == 200, lip_status.text
+    assert lip_status.json()["configured"] is False, lip_status.text
     lip = client.post(
         "/lip-sync",
         files={
