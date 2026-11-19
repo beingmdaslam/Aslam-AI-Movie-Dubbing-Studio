@@ -205,9 +205,11 @@ if ffmpeg:
         old_dir = os.environ.get("WAV2LIP_DIR")
         old_checkpoint = os.environ.get("WAV2LIP_CHECKPOINT")
         old_python = os.environ.get("PYTHON")
+        old_wav2lip_python = os.environ.get("WAV2LIP_PYTHON")
         try:
             os.environ["WAV2LIP_DIR"] = str(fake_wav2lip)
             os.environ["WAV2LIP_CHECKPOINT"] = str(checkpoint)
+            os.environ.pop("WAV2LIP_PYTHON", None)
             os.environ["PYTHON"] = "aslam-missing-python-executable"
             invalid_python_status = client.get("/lip-sync/status")
             assert invalid_python_status.status_code == 200
@@ -237,7 +239,7 @@ if ffmpeg:
             assert lip_result.status_code == 200, lip_result.text
             assert lip_result.headers.get("content-type", "").startswith("video/mp4")
         finally:
-            for key, value in (("WAV2LIP_DIR", old_dir), ("WAV2LIP_CHECKPOINT", old_checkpoint), ("PYTHON", old_python)):
+            for key, value in (("WAV2LIP_DIR", old_dir), ("WAV2LIP_CHECKPOINT", old_checkpoint), ("PYTHON", old_python), ("WAV2LIP_PYTHON", old_wav2lip_python)):
                 if value is None:
                     os.environ.pop(key, None)
                 else:
