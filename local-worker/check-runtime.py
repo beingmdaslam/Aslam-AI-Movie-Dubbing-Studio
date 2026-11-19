@@ -211,6 +211,9 @@ if ffmpeg:
             os.environ["WAV2LIP_CHECKPOINT"] = str(checkpoint)
             os.environ.pop("WAV2LIP_PYTHON", None)
             os.environ["PYTHON"] = "aslam-missing-python-executable"
+            os.environ["WAV2LIP_PYTHON"] = sys.executable
+            assert worker.resolve_wav2lip_python() == sys.executable
+            os.environ.pop("WAV2LIP_PYTHON", None)
             invalid_python_status = client.get("/lip-sync/status")
             assert invalid_python_status.status_code == 200
             assert invalid_python_status.json()["configured"] is False
