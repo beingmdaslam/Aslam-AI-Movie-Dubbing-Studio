@@ -188,6 +188,7 @@ Do not expose this worker directly to the public internet without authentication
 - `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
 - `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
 - `install-voice-windows.bat` installs optional XTTS voice generation after asking for confirmation and reminding you to review its license.
+- `configure-wav2lip-windows.bat` validates an existing Wav2Lip checkout and checkpoint, then saves their paths as Windows user environment variables. It does not download the model or checkpoint.
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
