@@ -569,12 +569,19 @@ async def diarize(video: UploadFile = File(...)):
             known_speakers = []
             output_segments = []
             for segment in segments:
-                start = max(0, int(segment.start * 16000))
-                end = min(waveform.shape[1], int(segment.end * 16000))
+                # Add a small context margin: Whisper's speech boundaries can
+                # cut off consonants and make short speaker embeddings unstable.
+                context_samples = int(0.25 * 16000)
+                start = max(0, int(segment.start * 16000) - context_samples)
+                end = min(
+                    waveform.shape[1],
+                    int(segment.end * 16000) + context_samples,
+                )
                 crop = waveform[:, start:end]
                 speaker_id = "speaker_unknown"
-                # Very short utterances do not provide reliable speaker embeddings.
-                if crop.shape[1] >= 16000:
+                # ECAPA embeddings from very short clips are unreliable. Keep
+                # these lines reviewable instead of confidently mislabelling them.
+                if crop.shape[1] >= int(1.5 * 16000):
                     with torch.no_grad():
                         embedding = (
                             encoder.encode_batch(crop)
