@@ -103,3 +103,98 @@ if ffmpeg:
         assert extracted.content.startswith(b"RIFF")
 
 print("FFmpeg integration smoke test passed: synthetic video -> mock local voice -> dubbed MP4 -> extracted WAV.")
+
+
+# Verify real Argos route selection logic with lightweight fake language models.
+# This covers both direct translation and the English-pivot fallback without
+# downloading language packages in CI.
+import sys
+import types
+
+class FakeTranslator:
+    def __init__(self, mapping):
+        self.mapping = mapping
+
+    def translate(self, value):
+        return self.mapping.get(value, value + " [translated]")
+
+class FakeLanguage:
+    def __init__(self, code, links=None):
+        self.code = code
+        self.links = links or {}
+
+    def get_translation(self, target):
+        return self.links.get(target.code)
+
+fake_en = FakeLanguage("en")
+fake_fr = FakeLanguage("fr")
+fake_hi = FakeLanguage("hi")
+fake_fr.links["en"] = FakeTranslator({"bonjour": "hello"})
+fake_en.links["hi"] = FakeTranslator({"hello": "नमस्ते"})
+fake_en.links["fr"] = FakeTranslator({"hello": "bonjour"})
+fake_hi.links["en"] = FakeTranslator({"नमस्ते": "hello"})
+fake_translate_module = types.ModuleType("argostranslate.translate")
+fake_translate_module.get_installed_languages = lambda: [fake_fr, fake_en, fake_hi]
+fake_package_module = types.ModuleType("argostranslate")
+fake_package_module.__path__ = []
+fake_package_module.translate = fake_translate_module
+previous_argos = {
+    key: sys.modules.get(key)
+    for key in ("argostranslate", "argostranslate.translate")
+}
+sys.modules["argostranslate"] = fake_package_module
+sys.modules["argostranslate.translate"] = fake_translate_module
+try:
+    pivot = client.post(
+        "/translate",
+        json={
+            "sourceLanguage": "fr",
+            "targetLanguage": "hi",
+            "segments": [{"start": 0.0, "end": 1.0, "text": "bonjour"}],
+        },
+    )
+    assert pivot.status_code == 200, pivot.text
+    assert pivot.json()["segments"][0]["text"] == "नमस्ते", pivot.text
+
+    direct = client.post(
+        "/translate",
+        json={
+            "sourceLanguage": "en",
+            "targetLanguage": "hi",
+            "segments": [{"start": 0.0, "end": 1.0, "text": "hello"}],
+        },
+    )
+    assert direct.status_code == 200, direct.text
+    assert direct.json()["segments"][0]["text"] == "नमस्ते", direct.text
+finally:
+    for key, value in previous_argos.items():
+        if value is None:
+            sys.modules.pop(key, None)
+        else:
+            sys.modules[key] = value
+
+print("Argos route tests passed: direct translation and two-step English-pivot translation.")
+
+
+# Wav2Lip must fail clearly and safely when the optional local checkout or
+# checkpoint has not been configured; no external service is contacted.
+import os
+old_wav2lip_dir = os.environ.pop("WAV2LIP_DIR", None)
+old_wav2lip_checkpoint = os.environ.pop("WAV2LIP_CHECKPOINT", None)
+try:
+    lip = client.post(
+        "/lip-sync",
+        files={
+            "video": ("face.mp4", b"not-a-real-video", "video/mp4"),
+            "dubbed_audio": ("dubbed.wav", b"not-a-real-audio", "audio/wav"),
+        },
+    )
+    assert lip.status_code == 503, lip.text
+    assert "Wav2Lip is not configured" in lip.json()["detail"]
+finally:
+    if old_wav2lip_dir is not None:
+        os.environ["WAV2LIP_DIR"] = old_wav2lip_dir
+    if old_wav2lip_checkpoint is not None:
+        os.environ["WAV2LIP_CHECKPOINT"] = old_wav2lip_checkpoint
+
+print("Wav2Lip readiness test passed: missing local model is reported without crashing.");
