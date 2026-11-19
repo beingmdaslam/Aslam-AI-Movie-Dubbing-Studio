@@ -75,7 +75,7 @@ Example request:
 }
 ```
 
-Installation needs internet and disk space. The language pair must be available in the Argos package index. Model availability and translation quality vary by language pair.
+Installation needs internet and disk space. The worker first looks for a direct model in the Argos package index. If none exists, it tries a two-step route through English (source → English → target) and installs both free models. If neither route exists, that pair is not currently available. Model availability and translation quality vary by language pair.
 
 ## 3. Translate transcript segments
 
