@@ -585,3 +585,177 @@ async def clone_voice(
         finally:
             await reference_audio.close()
 
+@app.post("/dub-audio")
+async def dub_audio(
+    video: UploadFile = File(...),
+    segments_json: str = Form(...),
+    speaker_ids_json: str = Form(...),
+    voice_samples: list[UploadFile] = File(...),
+    language: str = Form(...),
+    background_volume: float = Form(0.18, ge=0.0, le=1.0),
+):
+    """Generate assigned character voices, place each line at its timestamp and mux audio with video."""
+    import json
+
+    language = language.lower().strip()
+    if language not in SUPPORTED_XTTS_LANGUAGES:
+        raise HTTPException(status_code=400, detail="Unsupported XTTS language code.")
+
+    try:
+        segments = json.loads(segments_json)
+        speaker_ids = json.loads(speaker_ids_json)
+    except (TypeError, json.JSONDecodeError):
+        raise HTTPException(status_code=400, detail="Segments or speaker IDs contain invalid JSON.")
+
+    if not isinstance(segments, list) or not segments or len(segments) > 300:
+        raise HTTPException(status_code=400, detail="Provide between 1 and 300 dialogue segments.")
+    if not isinstance(speaker_ids, list) or len(speaker_ids) != len(voice_samples):
+        raise HTTPException(status_code=400, detail="Each voice sample must have one matching speaker ID.")
+    if len(set(speaker_ids)) != len(speaker_ids) or not all(
+        isinstance(item, str) and item.strip() for item in speaker_ids
+    ):
+        raise HTTPException(status_code=400, detail="Speaker IDs must be unique non-empty strings.")
+
+    voice_map = dict(zip(speaker_ids, voice_samples))
+    for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} is invalid.")
+        text_value = segment.get("text")
+        speaker_id = segment.get("speakerId")
+        try:
+            start = float(segment.get("start"))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} has invalid start time.")
+        if not isinstance(text_value, str) or not text_value.strip() or len(text_value) > 1500:
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} has invalid dialogue text.")
+        if start < 0 or not isinstance(speaker_id, str) or speaker_id not in voice_map:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {index + 1} needs a valid start time and an assigned speaker voice.",
+            )
+
+    filename = Path(video.filename or "movie.mp4").name
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Unsupported video format.")
+
+    with tempfile.TemporaryDirectory(prefix="aslam-dub-mix-") as temp_dir:
+        root = Path(temp_dir)
+        source_path = root / filename
+        background_path = root / "background.wav"
+        output_path = root / "aslam-ai-dubbed.mp4"
+        generated_paths = []
+        size = 0
+        try:
+            with source_path.open("wb") as output:
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Local worker limit is 1 GB.")
+                    output.write(chunk)
+            if size == 0:
+                raise HTTPException(status_code=400, detail="Video file is empty.")
+
+            ffmpeg = shutil.which("ffmpeg")
+            if not ffmpeg:
+                raise HTTPException(status_code=500, detail="FFmpeg is not installed.")
+            extract = subprocess.run(
+                [ffmpeg, "-y", "-i", str(source_path), "-vn", "-ac", "2",
+                 "-ar", "24000", str(background_path)],
+                capture_output=True, text=True, timeout=60 * 60,
+            )
+            if extract.returncode != 0 or not background_path.exists():
+                raise HTTPException(
+                    status_code=422,
+                    detail="Could not extract original audio. The video must contain an audio track.",
+                )
+
+            engine = get_tts_model()
+            reference_paths = {}
+            for speaker_id, upload in voice_map.items():
+                ref_suffix = Path(upload.filename or "voice.wav").suffix.lower()
+                if ref_suffix not in {".wav", ".mp3", ".m4a", ".flac", ".ogg"}:
+                    raise HTTPException(status_code=400, detail=f"Unsupported voice sample for {speaker_id}.")
+                ref_path = root / f"voice_{len(reference_paths)}{ref_suffix}"
+                ref_size = 0
+                with ref_path.open("wb") as output:
+                    while True:
+                        chunk = await upload.read(256 * 1024)
+                        if not chunk:
+                            break
+                        ref_size += len(chunk)
+                        if ref_size > 20 * 1024 * 1024:
+                            raise HTTPException(status_code=413, detail="Each voice sample is limited to 20 MB.")
+                        output.write(chunk)
+                if ref_size == 0:
+                    raise HTTPException(status_code=400, detail=f"Voice sample for {speaker_id} is empty.")
+                reference_paths[speaker_id] = ref_path
+
+            for index, segment in enumerate(segments):
+                generated_path = root / f"line_{index:04d}.wav"
+                engine.tts_to_file(
+                    text=segment["text"].strip(),
+                    speaker_wav=str(reference_paths[segment["speakerId"]]),
+                    language=language,
+                    file_path=str(generated_path),
+                )
+                if not generated_path.exists() or generated_path.stat().st_size == 0:
+                    raise RuntimeError(f"Voice generation failed for dialogue {index + 1}.")
+                generated_paths.append((generated_path, float(segment["start"])))
+
+            # Input 0 is the video; input 1 is its extracted original soundtrack.
+            command = [ffmpeg, "-y", "-i", str(source_path), "-i", str(background_path)]
+            for generated_path, _ in generated_paths:
+                command.extend(["-i", str(generated_path)])
+
+            filters = [f"[1:a]volume={background_volume:.3f}[bg]"]
+            mix_inputs = ["[bg]"]
+            for index, (_, start_time) in enumerate(generated_paths):
+                delay_ms = int(round(start_time * 1000))
+                filters.append(
+                    f"[{index + 2}:a]adelay={delay_ms}|{delay_ms},volume=1.0[d{index}]"
+                )
+                mix_inputs.append(f"[d{index}]")
+            filters.append(
+                "".join(mix_inputs)
+                + f"amix=inputs={len(mix_inputs)}:duration=first:dropout_transition=0,"
+                  "alimiter=limit=0.95[aout]"
+            )
+            command.extend([
+                "-filter_complex", ";".join(filters),
+                "-map", "0:v:0", "-map", "[aout]",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "+faststart", "-shortest", str(output_path),
+            ])
+            render = subprocess.run(
+                command, capture_output=True, text=True, timeout=6 * 60 * 60
+            )
+            if render.returncode != 0 or not output_path.exists():
+                print("FFmpeg dub mix error:", render.stderr[-3000:])
+                raise HTTPException(status_code=500, detail="Could not mix dubbed audio into the video.")
+
+            return Response(
+                content=output_path.read_bytes(),
+                media_type="video/mp4",
+                headers={
+                    "Content-Disposition": 'attachment; filename="aslam-ai-dubbed.mp4"'
+                },
+            )
+        except HTTPException:
+            raise
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=408, detail="Video dubbing or rendering timed out.")
+        except Exception as exc:
+            print("Dub audio pipeline error:", repr(exc))
+            raise HTTPException(
+                status_code=500,
+                detail="Dubbing failed. Check XTTS model, voice samples and worker logs.",
+            )
+        finally:
+            await video.close()
+            for upload in voice_samples:
+                await upload.close()
+
