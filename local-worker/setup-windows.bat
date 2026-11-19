@@ -39,9 +39,23 @@ echo.
 echo Checking FFmpeg...
 where ffmpeg >nul 2>nul
 if errorlevel 1 (
-  echo WARNING: FFmpeg was not found.
-  echo Install FFmpeg and add its bin folder to PATH before processing videos.
-  echo If winget is available, you can try: winget install Gyan.FFmpeg
+  echo FFmpeg is required for video processing but was not found.
+  where winget >nul 2>nul
+  if errorlevel 1 (
+    echo Windows Package Manager (winget) is unavailable.
+    echo Install FFmpeg manually and add its bin folder to PATH.
+  ) else (
+    set /p INSTALL_FFMPEG=Try installing free FFmpeg with winget now? (Y/N):
+    if /I "%INSTALL_FFMPEG%"=="Y" (
+      winget install --id Gyan.FFmpeg --exact --silent --accept-package-agreements --accept-source-agreements
+      if errorlevel 1 (
+        echo FFmpeg installation did not complete. Install it manually and retry.
+      ) else (
+        echo FFmpeg installation requested. Close this window and reopen Command Prompt
+        echo so the updated PATH is loaded, then run setup-windows.bat again.
+      )
+    )
+  )
 ) else (
   echo FFmpeg found.
 )
