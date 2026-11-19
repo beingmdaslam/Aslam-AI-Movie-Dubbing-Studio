@@ -290,7 +290,7 @@ preview.addEventListener("error", function() {
   videoInfo.textContent = t.failed;
 });
 
-/* CLOUDFLARE R2 VIDEO UPLOAD - existing Netlify endpoint flow retained */
+/* Local-only start: no R2 upload, paid API or cloud processing. */
 startButton.addEventListener("click", function() {
   const t = translations[appLanguage.value] || translations.en;
   const file = fileInput.files && fileInput.files[0];
