@@ -290,8 +290,9 @@ preview.addEventListener("error", function() {
   videoInfo.textContent = t.failed;
 });
 
-/* Local-only start: no R2 upload, paid API or cloud processing. */
-startButton.addEventListener("click", function() {
+/* Upload selected video to the existing private Cloudflare R2 bucket. */
+let uploadInProgress = false;
+startButton.addEventListener("click", async function() {
   const t = translations[appLanguage.value] || translations.en;
   const file = fileInput.files && fileInput.files[0];
 
@@ -299,13 +300,82 @@ startButton.addEventListener("click", function() {
     statusText.textContent = t.empty;
     return;
   }
+  if (uploadInProgress) return;
 
-  // All AI processing is local. Do not upload the movie to R2 or a paid cloud API.
-  statusText.textContent =
-    "Opening the free local studio. If it does not open, start local-worker/start-windows.bat on your computer first. Select the video again in the local studio.";
-  window.open("http://127.0.0.1:8765/studio", "_blank");
+  const extension = (file.name.split(".").pop() || "").toLowerCase();
+  const mimeFallback = {
+    mp4: "video/mp4", m4v: "video/x-m4v", mov: "video/quicktime",
+    mkv: "video/x-matroska", webm: "video/webm", avi: "video/x-msvideo"
+  };
+  const contentType = file.type && file.type.startsWith("video/")
+    ? file.type
+    : (mimeFallback[extension] || "");
+
+  if (!contentType) {
+    statusText.textContent = "Unsupported video format. Please choose MP4, MOV, MKV, WEBM or AVI.";
+    return;
+  }
+
+  uploadInProgress = true;
+  startButton.disabled = true;
+  startButton.textContent = "PREPARING SECURE UPLOAD…";
+  statusText.textContent = "Requesting a secure upload link…";
+
+  try {
+    const response = await fetch("/.netlify/functions/create-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType,
+        fileSize: file.size
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.uploadUrl || !data.key) {
+      throw new Error(data.error || "Could not prepare the secure upload.");
+    }
+
+    statusText.textContent = "Uploading video to secure storage…";
+    startButton.textContent = "UPLOADING 0%";
+
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", data.uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", contentType);
+      xhr.upload.addEventListener("progress", event => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          startButton.textContent = "UPLOADING " + percent + "%";
+          statusText.textContent =
+            "Uploading: " + percent + "% (" +
+            (event.loaded / (1024 * 1024)).toFixed(1) + " / " +
+            (event.total / (1024 * 1024)).toFixed(1) + " MB)";
+        }
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Storage upload failed (HTTP " + xhr.status + "). Check the R2 bucket CORS settings."));
+      });
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload. Please retry on a stable connection.")));
+      xhr.addEventListener("abort", () => reject(new Error("Upload was cancelled.")));
+      xhr.send(file);
+    });
+
+    statusText.textContent =
+      "Upload complete. Storage key: " + data.key +
+      ". AI transcription, translation, voice cloning and lip-sync processing are not connected yet.";
+    startButton.textContent = "UPLOAD COMPLETE";
+  } catch (error) {
+    console.error("Video upload error:", error);
+    statusText.textContent = error.message || "Video upload failed. Please try again.";
+    startButton.textContent = t.start;
+  } finally {
+    uploadInProgress = false;
+    startButton.disabled = false;
+  }
 });
-
 
 window.addEventListener("beforeunload", function() {
   if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
