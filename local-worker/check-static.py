@@ -43,6 +43,7 @@ required_routes = [
     '@app.post("/dub-audio")',
     '@app.post("/subtitles/burn-in")',
     '@app.post("/audio/extract")',
+    '@app.get("/lip-sync/status")',
     '@app.post("/lip-sync")',
 ]
 source = WORKER.read_text(encoding="utf-8")
