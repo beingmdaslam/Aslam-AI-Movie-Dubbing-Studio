@@ -129,6 +129,7 @@ function renderReview(){
  translatedSegments.forEach((segment,index)=>{
   const card=document.createElement("div");card.className="line";
   const title=document.createElement("p");title.className="muted";title.textContent="#"+(index+1)+" • "+Number(segment.start).toFixed(2)+"s – "+Number(segment.end).toFixed(2)+"s";card.appendChild(title);
+  const sourceText=document.createElement("p");sourceText.className="muted";sourceText.textContent="Original: "+(segment.sourceText||originalSegments[index]?.text||"");card.appendChild(sourceText);
   const text=document.createElement("textarea");text.value=segment.text||"";text.setAttribute("aria-label","Translated dialogue "+(index+1));text.addEventListener("input",()=>{translatedSegments[index].text=text.value;});card.appendChild(text);
   const select=document.createElement("select");select.setAttribute("aria-label","Speaker for dialogue "+(index+1));
   speakers.forEach(sp=>{const option=document.createElement("option");option.value=sp.speakerId;option.textContent=sp.label||sp.speakerId;option.dataset.speakerOption=sp.speakerId;select.appendChild(option);});
