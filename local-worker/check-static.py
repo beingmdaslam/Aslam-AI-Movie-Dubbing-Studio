@@ -81,6 +81,8 @@ if "py -3.8" not in wav2lip_setup or "WAV2LIP_PYTHON" not in wav2lip_setup:
     raise SystemExit("Wav2Lip setup must create and configure a separate Python 3.8 environment.")
 if "setx PYTHON " in wav2lip_setup:
     raise SystemExit("Wav2Lip setup must not overwrite the global PYTHON setting.")
+if "%%~zA LSS 1000000" not in wav2lip_setup or "%%~zA LSS 10000000" not in wav2lip_setup:
+    raise SystemExit("Wav2Lip setup must reject incomplete model weight files.")
 
 wav_helper = (ROOT / "configure-wav2lip-windows.bat").read_text(encoding="utf-8")
 if "WAV2LIP_PYTHON" not in wav_helper or "setx WAV2LIP_PYTHON" not in wav_helper:
