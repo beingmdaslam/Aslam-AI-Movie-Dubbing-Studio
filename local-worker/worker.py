@@ -1,5 +1,7 @@
+import asyncio
 import os
 import sys
+import threading
 import shutil
 import subprocess
 import tempfile
@@ -31,6 +33,7 @@ MAX_UPLOAD_BYTES = 1024 * 1024 * 1024  # 1 GB local-worker safety cap
 _model = None
 _speaker_model = None
 _tts_model = None
+_wav2lip_lock = threading.Lock()
 
 
 class TranslationRequest(BaseModel):
@@ -1109,6 +1112,18 @@ async def extract_audio(video: UploadFile = File(...)):
             await video.close()
 
 
+def run_wav2lip_subprocess(command, repo_path):
+    """Serialize Wav2Lip runs because upstream inference shares repo_path/temp files."""
+    with _wav2lip_lock:
+        return subprocess.run(
+            command,
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=6 * 60 * 60,
+        )
+
+
 def resolve_wav2lip_python():
     """Resolve the optional separate Wav2Lip interpreter, or use this worker's Python."""
     configured = os.getenv("PYTHON", "").strip()
@@ -1231,10 +1246,7 @@ async def lip_sync(
                 "--audio", str(audio_path),
                 "--outfile", str(output_path),
             ]
-            result = subprocess.run(
-                command, cwd=str(repo_path), capture_output=True, text=True,
-                timeout=6 * 60 * 60,
-            )
+            result = await asyncio.to_thread(run_wav2lip_subprocess, command, repo_path)
             if result.returncode != 0 or not output_path.exists():
                 print("Wav2Lip error:", result.stderr[-3000:])
                 raise HTTPException(
