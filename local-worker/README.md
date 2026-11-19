@@ -167,11 +167,13 @@ Implemented in the repository (not yet locally tested end-to-end):
 10. SRT subtitle burn-in with FFmpeg
 11. Optional Wav2Lip integration wrapper (requires separate model/checkpoint setup)
 
-Remaining product work:
-- Connect the web interface to the local worker and provide a guided end-to-end workflow
-- Add speech/music separation and more reliable dialogue overlap/duration fitting
-- Test dependency compatibility, model downloads, and full movie processing on the target computer
-- Improve job progress, cancellation, storage management and large-file streaming
+Remaining limitations and work:
+- The complete movie pipeline has not yet been run end-to-end on the target computer.
+- First-time model downloads, dependency compatibility and actual CPU processing time still need validation on that computer.
+- Dialogue duration fitting is basic: long generated lines can overlap later dialogue.
+- Speaker detection is experimental and should be reviewed manually.
+- Improve job progress, cancellation, storage management and large-file streaming.
+- Wav2Lip remains an optional integration wrapper requiring a separate repository, dependencies and checkpoint.
 
 Important: the Wav2Lip endpoint is only an integration wrapper. The model repository, Python dependencies and checkpoint must be installed separately. No end-to-end run has been performed yet.
  
@@ -180,7 +182,8 @@ Do not expose this worker directly to the public internet without authentication
 
 ## Windows helper files
 
-- `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.\n- `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
+- `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
+- `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
 - `install-voice-windows.bat` installs optional XTTS voice generation after asking for confirmation and reminding you to review its license.
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
