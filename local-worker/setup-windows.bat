@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 echo ==========================================
@@ -46,7 +46,7 @@ if errorlevel 1 (
     echo Install FFmpeg manually and add its bin folder to PATH.
   ) else (
     set /p INSTALL_FFMPEG=Try installing free FFmpeg with winget now? (Y/N):
-    if /I "%INSTALL_FFMPEG%"=="Y" (
+    if /I "!INSTALL_FFMPEG!"=="Y" (
       winget install --id Gyan.FFmpeg --exact --silent --accept-package-agreements --accept-source-agreements
       if errorlevel 1 (
         echo FFmpeg installation did not complete. Install it manually and retry.
