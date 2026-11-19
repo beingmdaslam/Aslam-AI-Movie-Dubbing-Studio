@@ -22,7 +22,7 @@ The API can now start and serve its health check and studio page even before opt
 
 ## Install
 
-**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages and offers an optional FFmpeg installation through Windows Package Manager (winget) if FFmpeg is missing. XTTS voice cloning is not part of the current guided studio. Wav2Lip remains a separate optional local model. After setup, you can double-click `test-pipeline-windows.bat` to run a local API and synthetic video/audio export self-test before using a real movie. This self-test uses a test voice and does not verify AI model inference.
+**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages and offers an optional FFmpeg installation through Windows Package Manager (winget) if FFmpeg is missing. XTTS voice cloning is not part of the current guided studio. Wav2Lip remains a separate optional local model. After setup, you can double-click `test-pipeline-windows.bat` to run a local API and synthetic video/audio export self-test before using a real movie. This self-test uses synthetic media and fake model adapters; it does not verify real Whisper, SpeechBrain, Argos or Wav2Lip model inference.
 
 Manual setup:
 
