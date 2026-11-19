@@ -1,0 +1,25 @@
+name: Local worker static checks
+
+on:
+  push:
+    paths:
+      - "local-worker/**"
+      - ".github/workflows/local-worker-static-check.yml"
+  pull_request:
+    paths:
+      - "local-worker/**"
+      - ".github/workflows/local-worker-static-check.yml"
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check local worker and studio syntax
+        run: python local-worker/check-static.py
