@@ -33,8 +33,13 @@ if not exist "%WAV2LIP_DIR%\face_detection\detection\sfd\s3fd.pth" (
   exit /b 1
 )
 
-set /p WAV2LIP_PYTHON=Optional full path to Wav2Lip environment python.exe (leave blank to use current worker Python):
-if not "%WAV2LIP_PYTHON%"=="" if not exist "%WAV2LIP_PYTHON%" (
+set /p WAV2LIP_PYTHON=Full path to Wav2Lip environment python.exe:
+if "%WAV2LIP_PYTHON%"=="" (
+  echo ERROR: A separate Wav2Lip Python executable is required.
+  pause
+  exit /b 1
+)
+if not exist "%WAV2LIP_PYTHON%" (
   echo ERROR: The selected Wav2Lip Python executable was not found.
   pause
   exit /b 1
@@ -54,7 +59,7 @@ if errorlevel 1 (
 )
 
 if not "%WAV2LIP_PYTHON%"=="" (
-  setx PYTHON "%WAV2LIP_PYTHON%" >nul
+  setx WAV2LIP_PYTHON "%WAV2LIP_PYTHON%" >nul
   if errorlevel 1 (
     echo ERROR: Could not save PYTHON.
     pause
@@ -66,5 +71,5 @@ echo.
 echo Wav2Lip paths saved for your Windows user account.
 echo Close the worker terminal and open a NEW Command Prompt.
 echo Then start the worker again and visit /lip-sync/status.
-echo If you supplied a separate Python executable, Wav2Lip will run inside that environment.
+echo Wav2Lip will run in its own Python environment; the main ASLAM AI Python stays unchanged.
 pause
