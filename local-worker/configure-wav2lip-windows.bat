@@ -26,6 +26,13 @@ if not exist "%WAV2LIP_CHECKPOINT%" (
   exit /b 1
 )
 
+if not exist "%WAV2LIP_DIR%\face_detection\detection\sfd\s3fd.pth" (
+  echo ERROR: S3FD face-detection weights are missing.
+  echo Place s3fd.pth at face_detection\detection\sfd\s3fd.pth inside the Wav2Lip folder.
+  pause
+  exit /b 1
+)
+
 set /p WAV2LIP_PYTHON=Optional full path to Wav2Lip environment python.exe (leave blank to use current worker Python):
 if not "%WAV2LIP_PYTHON%"=="" if not exist "%WAV2LIP_PYTHON%" (
   echo ERROR: The selected Wav2Lip Python executable was not found.
