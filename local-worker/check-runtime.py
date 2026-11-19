@@ -69,6 +69,36 @@ if ffmpeg:
             ],
             check=True, capture_output=True,
         )
+        # Verify the upload -> FFmpeg audio extraction -> Whisper result
+        # handling path with a deterministic fake model (no model download).
+        from types import SimpleNamespace
+
+        class FakeWhisper:
+            def transcribe(self, audio_path, **kwargs):
+                words = [
+                    SimpleNamespace(start=0.25, end=0.55, word=" Hello"),
+                    SimpleNamespace(start=0.56, end=0.95, word=" world."),
+                ]
+                segment = SimpleNamespace(
+                    start=0.25, end=0.95, text=" Hello world.", words=words
+                )
+                info = SimpleNamespace(
+                    language="en", language_probability=0.99, duration=2.0
+                )
+                return iter([segment]), info
+
+        worker.get_model = lambda: FakeWhisper()
+        with movie_path.open("rb") as movie:
+            transcription = client.post(
+                "/transcribe",
+                files={"video": ("test-movie.mp4", movie, "video/mp4")},
+            )
+        assert transcription.status_code == 200, transcription.text
+        transcript_data = transcription.json()
+        assert transcript_data["detectedLanguage"] == "en"
+        assert transcript_data["segments"][0]["text"] == "Hello world."
+        assert len(transcript_data["segments"][0]["words"]) == 2
+
         voice_buffer = io.BytesIO()
         with wave.open(voice_buffer, "wb") as audio:
             audio.setnchannels(1)
