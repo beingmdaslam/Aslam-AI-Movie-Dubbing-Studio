@@ -62,7 +62,7 @@ if errorlevel 1 (
 
 echo.
 echo Base setup is complete.
-echo XTTS voice generation is optional. Read README.md and review the Coqui Public Model License before installing it.
+echo Voice cloning is outside the current steps 2-5 workflow. Do not install XTTS for this version.
 echo To start the worker, double-click start-windows.bat.
 pause
 exit /b 0
