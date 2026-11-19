@@ -38,7 +38,9 @@ for html_path in html_files:
 required_routes = [
     '@app.get("/studio")',
     '@app.get("/system/check")',
+    '@app.post("/transcribe")',
     '@app.post("/diarize")',
+    '@app.get("/translation/languages")',
     '@app.post("/translate")',
     '@app.post("/subtitles/srt"',
     '@app.post("/translation/install")',
