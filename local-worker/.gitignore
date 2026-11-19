@@ -10,3 +10,7 @@ temp/
 *.mp4
 *.mkv
 *.mov
+
+# Optional Wav2Lip source and isolated environment
+local-worker/wav2lip/
+local-worker/.wav2lip-venv/
