@@ -147,7 +147,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 
 ## 10. Optional local lip-sync (Wav2Lip)
 
-`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The local studio exposes this as an optional checkbox; it is skipped with a clear status if the separate model/checkpoint is not configured. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
+`POST /audio/extract` accepts a dubbed video and returns its audio as WAV. `GET /lip-sync/status` checks for the local repository and checkpoint before any expensive dubbing begins. `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. The local studio exposes this as an optional checkbox; it is skipped with a clear status if the separate model/checkpoint is not configured. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
 
 - `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
