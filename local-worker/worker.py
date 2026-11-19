@@ -445,6 +445,44 @@ def create_srt(request: SubtitleRequest):
         headers={"Content-Disposition": 'attachment; filename="aslam-ai-subtitles.srt"'},
     )
 
+def _normalise_embedding(values):
+    vector = [float(value) for value in values]
+    magnitude = sum(value * value for value in vector) ** 0.5
+    if not vector or magnitude == 0:
+        raise ValueError("Speaker model returned an empty embedding.")
+    return [value / magnitude for value in vector]
+
+
+def _cosine_similarity(left, right):
+    if len(left) != len(right):
+        raise ValueError("Speaker embeddings have incompatible dimensions.")
+    return sum(a * b for a, b in zip(left, right))
+
+
+def _assign_speaker_embedding(embedding, known_speakers, threshold=0.72):
+    """Assign a normalized SpeechBrain embedding to the closest known voice."""
+    normalized = _normalise_embedding(embedding)
+    best_index = -1
+    best_score = -1.0
+    for index, known in enumerate(known_speakers):
+        score = _cosine_similarity(normalized, known["embedding"])
+        if score > best_score:
+            best_score = score
+            best_index = index
+
+    if best_index >= 0 and best_score >= threshold:
+        speaker_id = known_speakers[best_index]["id"]
+        previous = known_speakers[best_index]["embedding"]
+        known_speakers[best_index]["embedding"] = _normalise_embedding(
+            [old * 0.7 + new * 0.3 for old, new in zip(previous, normalized)]
+        )
+        return speaker_id
+
+    speaker_id = f"speaker_{len(known_speakers) + 1:02d}"
+    known_speakers.append({"id": speaker_id, "embedding": normalized})
+    return speaker_id
+
+
 def get_speaker_model():
     global _speaker_model
     if _speaker_model is None:
@@ -466,7 +504,6 @@ async def diarize(video: UploadFile = File(...)):
     try:
         import torch
         import torchaudio
-        import torch.nn.functional as F
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="Speaker detection packages are missing. Run setup-windows.bat.") from exc
     filename = Path(video.filename or "upload.mp4").name
@@ -525,31 +562,16 @@ async def diarize(video: UploadFile = File(...)):
                 # Very short utterances do not provide reliable speaker embeddings.
                 if crop.shape[1] >= 16000:
                     with torch.no_grad():
-                        embedding = encoder.encode_batch(crop).squeeze().detach().cpu()
-                    best_index = -1
-                    best_score = -1.0
-                    for index, known in enumerate(known_speakers):
-                        score = F.cosine_similarity(
-                            embedding.unsqueeze(0), known["embedding"].unsqueeze(0)
-                        ).item()
-                        if score > best_score:
-                            best_score = score
-                            best_index = index
-                    if best_index >= 0 and best_score >= 0.72:
-                        speaker_id = known_speakers[best_index]["id"]
-                        previous = known_speakers[best_index]["embedding"]
-                        known_speakers[best_index]["embedding"] = (
-                            previous * 0.7 + embedding * 0.3
+                        embedding = (
+                            encoder.encode_batch(crop)
+                            .squeeze()
+                            .detach()
+                            .cpu()
+                            .tolist()
                         )
-                        known_speakers[best_index]["embedding"] = F.normalize(
-                            known_speakers[best_index]["embedding"], dim=0
-                        )
-                    else:
-                        speaker_id = f"speaker_{len(known_speakers) + 1:02d}"
-                        known_speakers.append({
-                            "id": speaker_id,
-                            "embedding": F.normalize(embedding, dim=0),
-                        })
+                    speaker_id = _assign_speaker_embedding(
+                        embedding, known_speakers
+                    )
 
                 output_segments.append({
                     "start": round(segment.start, 3),
