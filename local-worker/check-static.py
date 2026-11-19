@@ -74,6 +74,8 @@ for required_ui in ('/diarize', '/translation/install', '/translate', '/subtitle
         raise SystemExit("Missing current studio workflow stage: " + required_ui)
 if '/dub-audio' in studio_source or 'XTTS' in studio_source or 'generateDub' in studio_source:
     raise SystemExit("Voice cloning / XTTS must not be part of the current guided studio.")
+if 'Character name' not in studio_source or 'updateSpeakerOptions' not in studio_source:
+    raise SystemExit("Speaker review must let users rename detected characters and update dialogue assignment options.")
 
 wav_helper = (ROOT / "configure-wav2lip-windows.bat").read_text(encoding="utf-8")
 if "WAV2LIP_PYTHON" not in wav_helper or "setx PYTHON" not in wav_helper:
