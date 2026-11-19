@@ -244,28 +244,61 @@ def install_translation_pair(request: InstallTranslationRequest):
     try:
         argostranslate.package.update_package_index()
         packages = argostranslate.package.get_available_packages()
-        match = next(
-            (
-                package for package in packages
-                if package.from_code == request.sourceLanguage
-                and package.to_code == request.targetLanguage
-            ),
-            None,
-        )
-        if match is None:
+        # Prefer a direct model. If Argos does not publish one, try a
+        # two-step route through English (source -> en -> target).
+        route_options = [[(request.sourceLanguage, request.targetLanguage)]]
+        if request.sourceLanguage != "en" and request.targetLanguage != "en":
+            route_options.append([
+                (request.sourceLanguage, "en"),
+                ("en", request.targetLanguage),
+            ])
+
+        selected_route = None
+        for route in route_options:
+            route_packages = []
+            for from_code, to_code in route:
+                match = next(
+                    (
+                        package for package in packages
+                        if package.from_code == from_code
+                        and package.to_code == to_code
+                    ),
+                    None,
+                )
+                if match is None:
+                    route_packages = []
+                    break
+                route_packages.append(match)
+            if route_packages:
+                selected_route = route_packages
+                break
+
+        if not selected_route:
             raise HTTPException(
                 status_code=404,
-                detail="No direct free Argos model is listed for this language pair.",
+                detail=(
+                    "No free Argos translation route is listed for this language pair, "
+                    "including the English-pivot option."
+                ),
             )
 
-        package_path = match.download()
-        argostranslate.package.install_from_path(package_path)
+        installed_pairs = []
+        for package in selected_route:
+            package_path = package.download()
+            argostranslate.package.install_from_path(package_path)
+            installed_pairs.append({
+                "source": package.from_code,
+                "target": package.to_code,
+            })
+
         return {
             "ok": True,
             "installed": True,
             "sourceLanguage": request.sourceLanguage,
             "targetLanguage": request.targetLanguage,
-            "message": "Free translation model installed locally.",
+            "installedPairs": installed_pairs,
+            "route": "direct" if len(installed_pairs) == 1 else "via English",
+            "message": "Free translation model route installed locally.",
         }
     except HTTPException:
         raise
