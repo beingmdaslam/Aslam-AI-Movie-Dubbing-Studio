@@ -1101,7 +1101,7 @@ async def lip_sync(
                 raise HTTPException(status_code=400, detail="Dubbed audio is empty.")
 
             command = [
-                os.getenv("PYTHON", "python"),
+                os.getenv("PYTHON", sys.executable),
                 str(inference_script),
                 "--checkpoint_path", str(checkpoint_path),
                 "--face", str(video_path),
