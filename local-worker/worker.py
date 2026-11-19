@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from speechbrain.inference.speaker import EncoderClassifier
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 import argostranslate.package
 import argostranslate.translate
@@ -81,6 +81,14 @@ def health():
         "model": MODEL_SIZE,
         "device": "cpu",
     }
+
+
+@app.get("/studio")
+def local_studio():
+    studio_path = Path(__file__).with_name("studio.html")
+    if not studio_path.is_file():
+        raise HTTPException(status_code=404, detail="Local studio page was not found.")
+    return FileResponse(studio_path, media_type="text/html")
 
 
 @app.get("/system/check")
