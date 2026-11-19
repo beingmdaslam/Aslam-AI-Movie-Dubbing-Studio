@@ -76,14 +76,14 @@ if '/dub-audio' in studio_source or 'XTTS' in studio_source or 'generateDub' in 
     raise SystemExit("Voice cloning / XTTS must not be part of the current guided studio.")
 if 'Character name' not in studio_source or 'updateSpeakerOptions' not in studio_source:
     raise SystemExit("Speaker review must let users rename detected characters and update dialogue assignment options.")
-wav2lip_setup = (ROOT / "local-worker" / "setup-wav2lip-windows.bat").read_text(encoding="utf-8")
+wav2lip_setup = (ROOT / "setup-wav2lip-windows.bat").read_text(encoding="utf-8")
 if "py -3.8" not in wav2lip_setup or "WAV2LIP_PYTHON" not in wav2lip_setup:
     raise SystemExit("Wav2Lip setup must create and configure a separate Python 3.8 environment.")
 if "setx PYTHON " in wav2lip_setup:
     raise SystemExit("Wav2Lip setup must not overwrite the global PYTHON setting.")
 
 wav_helper = (ROOT / "configure-wav2lip-windows.bat").read_text(encoding="utf-8")
-if "WAV2LIP_PYTHON" not in wav_helper or "setx PYTHON" not in wav_helper:
+if "WAV2LIP_PYTHON" not in wav_helper or "setx WAV2LIP_PYTHON" not in wav_helper:
     raise SystemExit("Wav2Lip setup helper must support a separate Python environment.")
 
 print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
