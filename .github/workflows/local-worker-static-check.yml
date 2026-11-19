@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "local-worker/**"
+      - "index.html"
       - ".github/workflows/local-worker-static-check.yml"
   pull_request:
     paths:
