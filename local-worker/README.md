@@ -89,7 +89,18 @@ Call `POST /diarize` and upload a video. The worker extracts audio, transcribes 
 
 Automatic diarization is approximate: short utterances may be marked `speaker_unknown`, and similar-sounding characters may be grouped together. Review and correct speaker labels before assigning cloned/generated voices. It does not identify a real person's identity.
 
-## 5. Export subtitle files
+## 5. Generate dialogue with a reference voice (XTTS-v2)
+
+The local `POST /tts/clone` endpoint accepts multipart form fields `text` and `language`, plus a `reference_audio` file (WAV/MP3/M4A/FLAC/OGG, up to 20 MB). It returns a WAV file generated to resemble the supplied voice sample. Check supported language codes with `GET /tts/languages`. Hindi (`hi`), Arabic (`ar`) and English (`en`) are included by the model; quality varies and each language should be tested.
+
+The first request downloads the XTTS-v2 model and can take time and substantial disk space. CPU generation may be slow. Use only voice recordings you own or have explicit permission to use; never clone someone else's voice without consent. XTTS-v2 model weights are governed by the Coqui Public Model License, which has restrictions including non-commercial use; check that license before any commercial/public deployment. The software and model download do not require a paid API, but this does not mean the model is cleared for every use.
+
+Example multipart fields in `/docs`:
+- `text`: `नमस्ते, आप कैसे हैं?`
+- `language`: `hi`
+- `reference_audio`: a clean voice sample
+
+## 6. Export subtitle files
 
 Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
 
@@ -102,7 +113,7 @@ Implemented:
 4. Local Argos Translate language-pair installation
 5. Timestamp-preserving transcript translation
 6. SRT subtitle export for original or translated dialogue
-7. Experimental local speaker grouping using SpeechBrain ECAPA embeddings
+7. Experimental local speaker grouping using SpeechBrain ECAPA embeddings\n8. Local XTTS-v2 reference-voice generation endpoint (license restrictions apply)
 
 Still to build:
 - Speaker diarization and manual speaker review
