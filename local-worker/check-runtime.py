@@ -39,9 +39,9 @@ assert translated.json()["segments"][0]["text"] == "Smoke test"
 print("Runtime smoke tests passed: app startup, health, studio page, system check and same-language translation.")
 
 
-# Exercise the actual FFmpeg dubbing/mux route without downloading AI models.
-# The fake TTS engine emits a short WAV tone; this verifies upload handling,
-# timestamp placement, audio mixing and MP4 output on the CI runner.
+# Exercise transcription, subtitle export/burn-in and Wav2Lip command wiring
+# without downloading or running any AI models. The lip-sync test uses a fake
+# inference script and an already-dubbed synthetic WAV.
 ffmpeg = shutil.which("ffmpeg")
 if ffmpeg:
     with tempfile.TemporaryDirectory(prefix="aslam-ci-") as temp_dir:
