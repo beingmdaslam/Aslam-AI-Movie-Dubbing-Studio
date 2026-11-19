@@ -198,3 +198,16 @@ finally:
         os.environ["WAV2LIP_CHECKPOINT"] = old_wav2lip_checkpoint
 
 print("Wav2Lip readiness test passed: missing local model is reported without crashing.");
+
+
+# Exercise the speaker-clustering decision logic without loading the large
+# SpeechBrain model. Real audio embeddings are still produced locally at runtime.
+known = []
+speaker_a = worker._assign_speaker_embedding([1.0, 0.0, 0.0], known)
+speaker_a_repeat = worker._assign_speaker_embedding([0.99, 0.01, 0.0], known)
+speaker_b = worker._assign_speaker_embedding([-1.0, 0.0, 0.0], known)
+assert speaker_a == "speaker_01"
+assert speaker_a_repeat == "speaker_01"
+assert speaker_b == "speaker_02"
+assert len(known) == 2
+print("Speaker clustering tests passed: similar embeddings are grouped and distinct embeddings create a new speaker.")
