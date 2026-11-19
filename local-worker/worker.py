@@ -1110,6 +1110,28 @@ async def extract_audio(video: UploadFile = File(...)):
             await video.close()
 
 
+@app.get("/lip-sync/status")
+def lip_sync_status():
+    """Report whether a local Wav2Lip checkout and checkpoint are configured."""
+    wav2lip_dir = os.getenv("WAV2LIP_DIR", "").strip()
+    checkpoint = os.getenv("WAV2LIP_CHECKPOINT", "").strip()
+    repo_path = Path(wav2lip_dir).expanduser() if wav2lip_dir else None
+    checkpoint_path = Path(checkpoint).expanduser() if checkpoint else None
+    inference_exists = bool(repo_path and (repo_path / "inference.py").is_file())
+    checkpoint_exists = bool(checkpoint_path and checkpoint_path.is_file())
+    return {
+        "ok": True,
+        "configured": inference_exists and checkpoint_exists,
+        "repositoryFound": inference_exists,
+        "checkpointFound": checkpoint_exists,
+        "message": (
+            "Wav2Lip is ready for a local inference attempt."
+            if inference_exists and checkpoint_exists
+            else "Wav2Lip needs a local repository containing inference.py and a compatible checkpoint. No model is bundled or downloaded automatically."
+        ),
+    }
+
+
 @app.post("/lip-sync")
 async def lip_sync(
     video: UploadFile = File(...),
