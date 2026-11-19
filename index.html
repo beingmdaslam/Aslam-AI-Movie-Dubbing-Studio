@@ -359,9 +359,62 @@ startButton.addEventListener("click", async function() {
       xhr.send(file);
     });
 
-    statusText.textContent =
-      "Video uploaded successfully! Storage ID: " + data.key +
-      ". AI dubbing engine is not connected yet.";
+    statusText.textContent = "Video uploaded. Starting AI dubbing...";
+
+    const dubResponse = await fetch("/.netlify/functions/create-dub", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        key: data.key,
+        sourceLanguage: sourceLanguage.value || "auto",
+        targetLanguage: targetLanguage.value
+      })
+    });
+
+    const dubData = await dubResponse.json().catch(() => ({}));
+    if (!dubResponse.ok || !dubData.projectId || !dubData.languageIds?.[0]) {
+      throw new Error(dubData.error || "Could not start AI dubbing.");
+    }
+
+    const projectId = dubData.projectId;
+    const languageId = dubData.languageIds[0];
+    let completed = false;
+
+    for (let attempt = 0; attempt < 240; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const statusResponse = await fetch(
+        "/.netlify/functions/dub-status?projectId=" +
+        encodeURIComponent(projectId) + "&languageId=" +
+        encodeURIComponent(languageId)
+      );
+      const statusData = await statusResponse.json().catch(() => ({}));
+
+      if (!statusResponse.ok) {
+        throw new Error(statusData.error || "Could not check dubbing progress.");
+      }
+
+      statusText.textContent =
+        "AI dubbing: " + (statusData.projectStatus || "preparing") +
+        " | " + (statusData.languageStatus || "queued");
+
+      if (statusData.languageStatus === "completed" && statusData.outputAudioUrl) {
+        completed = true;
+        statusText.textContent =
+          "AI dubbing audio is ready! Final video rendering and export are the next processing stage.";
+        break;
+      }
+
+      if (statusData.languageStatus === "failed" || statusData.projectStatus === "failed") {
+        throw new Error("AI dubbing failed. Please try again with another video.");
+      }
+    }
+
+    if (!completed) {
+      statusText.textContent =
+        "Dubbing is still processing. Your job ID: " + projectId +
+        ". You can check its progress again later.";
+    }
   } catch(error) {
     statusText.textContent = "Upload failed: " + error.message;
   } finally {
