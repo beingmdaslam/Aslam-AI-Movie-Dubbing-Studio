@@ -275,6 +275,10 @@ fake_fr.links["en"] = FakeTranslator({"bonjour": "hello"})
 fake_en.links["hi"] = FakeTranslator({"hello": "नमस्ते"})
 fake_en.links["fr"] = FakeTranslator({"hello": "bonjour"})
 fake_hi.links["en"] = FakeTranslator({"नमस्ते": "hello"})
+# Installed language codes alone are insufficient: the exact route must exist.
+assert len(worker._installed_translation_route("fr", "hi", [fake_fr, fake_en, fake_hi])) == 2
+fake_es = FakeLanguage("es")
+assert worker._installed_translation_route("fr", "es", [fake_fr, fake_es]) is None
 fake_translate_module = types.ModuleType("argostranslate.translate")
 fake_translate_module.get_installed_languages = lambda: [fake_fr, fake_en, fake_hi]
 fake_package_module = types.ModuleType("argostranslate")
