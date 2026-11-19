@@ -153,7 +153,7 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 - `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
 - `PYTHON`: optional Python executable path (defaults to `python`)
 
-The Wav2Lip model/checkpoint has licensing and usage restrictions; review the exact repository and checkpoint license before use, especially for commercial projects. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
+The upstream open-source Wav2Lip repository states that its code and model are for personal/research/non-commercial use only; commercial use is prohibited. Review the [official license/disclaimer](https://github.com/Rudrabha/Wav2Lip#license-and-citation) before use. This integration does not use the paid Sync API. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
 
 ## Current guided workflow (requested scope: steps 2–5)
 
