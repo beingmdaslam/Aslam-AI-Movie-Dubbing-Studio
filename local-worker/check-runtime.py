@@ -1,6 +1,8 @@
 """Fast, model-free API smoke tests. Heavy AI models are deliberately not downloaded in CI."""
 import os
 import sys
+import types
+import contextlib
 from fastapi.testclient import TestClient
 import worker
 import io
@@ -85,6 +87,65 @@ if ffmpeg:
         assert transcript_data["detectedLanguage"] == "en"
         assert transcript_data["segments"][0]["text"] == "Hello world."
         assert len(transcript_data["segments"][0]["words"]) == 2
+
+        # Exercise the full diarization route with fake tensor/audio/embedding adapters.
+        class FakeWaveform:
+            def __init__(self, length=32000):
+                self.shape = (1, length)
+
+            def __getitem__(self, key):
+                sample_slice = key[1]
+                return FakeWaveform(max(0, sample_slice.stop - sample_slice.start))
+
+        class FakeEmbedding:
+            def squeeze(self): return self
+            def detach(self): return self
+            def cpu(self): return self
+            def tolist(self): return [1.0, 0.0, 0.0]
+
+        class FakeEncoder:
+            def encode_batch(self, crop):
+                return FakeEmbedding()
+
+        class FakeDiarizeWhisper:
+            def transcribe(self, audio_path, **kwargs):
+                words = [
+                    SimpleNamespace(start=0.2, end=0.7, word=" Hello"),
+                    SimpleNamespace(start=0.8, end=1.4, word=" there."),
+                ]
+                segment = SimpleNamespace(start=0.2, end=1.6, text=" Hello there.", words=words)
+                info = SimpleNamespace(language="en", language_probability=0.99, duration=2.0)
+                return iter([segment]), info
+
+        fake_torch = types.ModuleType("torch")
+        fake_torch.no_grad = contextlib.nullcontext
+        fake_torchaudio = types.ModuleType("torchaudio")
+        fake_torchaudio.load = lambda path: (FakeWaveform(), 16000)
+        old_torch = sys.modules.get("torch")
+        old_torchaudio = sys.modules.get("torchaudio")
+        worker.get_model = lambda: FakeDiarizeWhisper()
+        worker.get_speaker_model = lambda: FakeEncoder()
+        sys.modules["torch"] = fake_torch
+        sys.modules["torchaudio"] = fake_torchaudio
+        try:
+            with movie_path.open("rb") as movie:
+                diarized = client.post(
+                    "/diarize",
+                    files={"video": ("test-movie.mp4", movie, "video/mp4")},
+                )
+            assert diarized.status_code == 200, diarized.text
+            diarized_json = diarized.json()
+            assert diarized_json["speakerCount"] == 1, diarized_json
+            assert diarized_json["segments"][0]["speakerId"] == "speaker_01"
+        finally:
+            if old_torch is None:
+                sys.modules.pop("torch", None)
+            else:
+                sys.modules["torch"] = old_torch
+            if old_torchaudio is None:
+                sys.modules.pop("torchaudio", None)
+            else:
+                sys.modules["torchaudio"] = old_torchaudio
 
         # Create a synthetic already-dubbed WAV for the optional lip-sync integration test.
         lip_audio_buffer = io.BytesIO()
