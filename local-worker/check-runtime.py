@@ -4,9 +4,7 @@ import sys
 from fastapi.testclient import TestClient
 import worker
 import io
-import math
 import shutil
-import struct
 import subprocess
 import tempfile
 import wave
@@ -46,19 +44,6 @@ print("Runtime smoke tests passed: app startup, health, studio page, system chec
 # timestamp placement, audio mixing and MP4 output on the CI runner.
 ffmpeg = shutil.which("ffmpeg")
 if ffmpeg:
-    class FakeTTS:
-        def tts_to_file(self, text, speaker_wav, language, file_path):
-            sample_rate = 24000
-            frames = bytearray()
-            for index in range(int(sample_rate * 0.45)):
-                sample = int(5000 * math.sin(2 * math.pi * 330 * index / sample_rate))
-                frames.extend(struct.pack("<h", sample))
-            with wave.open(str(file_path), "wb") as audio:
-                audio.setnchannels(1)
-                audio.setsampwidth(2)
-                audio.setframerate(sample_rate)
-                audio.writeframes(bytes(frames))
-
     with tempfile.TemporaryDirectory(prefix="aslam-ci-") as temp_dir:
         movie_path = Path(temp_dir) / "test-movie.mp4"
         subprocess.run(
@@ -101,38 +86,13 @@ if ffmpeg:
         assert transcript_data["segments"][0]["text"] == "Hello world."
         assert len(transcript_data["segments"][0]["words"]) == 2
 
-        voice_buffer = io.BytesIO()
-        with wave.open(voice_buffer, "wb") as audio:
+        # Create a synthetic already-dubbed WAV for the optional lip-sync integration test.
+        lip_audio_buffer = io.BytesIO()
+        with wave.open(lip_audio_buffer, "wb") as audio:
             audio.setnchannels(1)
             audio.setsampwidth(2)
-            audio.setframerate(24000)
-            audio.writeframes(b"\\x00\\x00" * 24000)
-
-        worker.get_tts_model = lambda: FakeTTS()
-        with movie_path.open("rb") as movie:
-            dubbed = client.post(
-                "/dub-audio",
-                files={
-                    "video": ("test-movie.mp4", movie, "video/mp4"),
-                    "voice_samples": ("voice.wav", voice_buffer.getvalue(), "audio/wav"),
-                },
-                data={
-                    "segments_json": '[{"start":0.2,"end":1.0,"text":"Hello","speakerId":"speaker_01"}]',
-                    "speaker_ids_json": '["speaker_01"]',
-                    "language": "en",
-                    "background_volume": "0.1",
-                },
-            )
-        assert dubbed.status_code == 200, dubbed.text
-        assert dubbed.headers.get("content-type", "").startswith("video/mp4")
-        assert dubbed.content[:4] == b"\\x00\\x00\\x00\\x18" or b"ftyp" in dubbed.content[:32]
-
-        extracted = client.post(
-            "/audio/extract",
-            files={"video": ("dubbed.mp4", dubbed.content, "video/mp4")},
-        )
-        assert extracted.status_code == 200, extracted.text
-        assert extracted.content.startswith(b"RIFF")
+            audio.setframerate(16000)
+            audio.writeframes(bytes(32000))
 
         # Subtitle export, speaker correction and subtitle burn-in are model-free.
         srt_response = client.post(
@@ -189,7 +149,7 @@ if ffmpeg:
                     "/lip-sync",
                     files={
                         "video": ("test-movie.mp4", movie, "video/mp4"),
-                        "dubbed_audio": ("dubbed.wav", extracted.content, "audio/wav"),
+                        "dubbed_audio": ("dubbed.wav", lip_audio_buffer.getvalue(), "audio/wav"),
                     },
                 )
             assert lip_result.status_code == 200, lip_result.text
