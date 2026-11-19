@@ -12,7 +12,7 @@ This worker runs on the user's own computer. It uses FFmpeg, faster-whisper and 
 
 ## Requirements
 
-The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis, so missing components are reported before a long video upload begins. The guided studio includes per-character reference voice uploads and local XTTS-v2 voice matching. Install the optional voice package with `install-voice-windows.bat` before using the voice-matching export. Use only voice samples you own or have permission to use.
+The API can start and serve its health check and studio page even before AI model packages are loaded. Visit `/system/check` to see which local packages and FFmpeg are available. The guided studio checks prerequisites before analysis, so missing components are reported before a long video upload begins. The current guided workflow covers transcription, speaker grouping, translation, subtitle export/burn-in and optional Wav2Lip using audio you supply separately. Voice cloning is excluded.
 
 
 - Python 3.10 or 3.11
@@ -43,8 +43,6 @@ source .venv/bin/activate
 Then:
 ```bash
 pip install -r requirements.txt
-# Optional: install XTTS voice generation separately (large ML dependency set)
-pip install -r requirements-voice.txt
 uvicorn worker:app --host 127.0.0.1 --port 8765
 ```
 
@@ -178,7 +176,7 @@ Voice cloning / XTTS is intentionally excluded from the current guided studio. T
 - First-time Whisper, SpeechBrain and Argos model downloads require internet and disk space; CPU processing can be slow.
 - Speaker detection is experimental. Short utterances may be unknown and similar voices can be grouped incorrectly; review the labels.
 - Wav2Lip remains an integration wrapper requiring a separate repository, compatible dependencies and checkpoint. No real checkpoint inference has been completed.
-- Improve job progress, cancellation, storage management and large-file streaming.
+- Real model inference and large-movie performance must be checked on the target computer; the current API uses bounded upload sizes and temporary working folders.
 
 Important: the Wav2Lip endpoint is only an integration wrapper. The model repository, Python dependencies and checkpoint must be installed separately. No end-to-end run has been performed yet.
  
@@ -189,7 +187,7 @@ Do not expose this worker directly to the public internet without authentication
 
 - `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
 - `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
-- `install-voice-windows.bat` installs optional XTTS voice generation after asking for confirmation and reminding you to review its license.
+- Voice cloning / XTTS is not part of the current guided workflow. Older compatibility endpoints and optional files may remain in the repository, but they are not required for steps 2–5.
 - `configure-wav2lip-windows.bat` validates an existing Wav2Lip checkout, main checkpoint and S3FD face detector file, optionally saves a separate Wav2Lip Python executable, then stores the paths as Windows user environment variables. It does not download any model weights.
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
