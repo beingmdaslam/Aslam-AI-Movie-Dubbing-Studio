@@ -12,7 +12,7 @@ This worker runs on the user's own computer. It uses FFmpeg, faster-whisper and 
 
 ## Requirements
 
-The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis, so missing components are reported before a long video upload begins. The current guided studio excludes XTTS voice cloning.
+The API can now start and serve its health check and studio page even before optional AI model packages are loaded. Visit `/system/check` to see exactly which local packages and FFmpeg are available. The studio checks prerequisites before starting analysis, so missing components are reported before a long video upload begins. The guided studio includes per-character reference voice uploads and local XTTS-v2 voice matching. Install the optional voice package with `install-voice-windows.bat` before using the voice-matching export. Use only voice samples you own or have permission to use.
 
 
 - Python 3.10 or 3.11
