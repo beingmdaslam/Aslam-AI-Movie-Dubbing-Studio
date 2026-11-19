@@ -966,6 +966,57 @@ async def burn_in_subtitles(
             await video.close()
             await subtitles.close()
 
+@app.post("/audio/extract")
+async def extract_audio(video: UploadFile = File(...)):
+    """Extract the current MP4 soundtrack as WAV for the optional lip-sync stage."""
+    filename = Path(video.filename or "dubbed.mp4").name
+    if Path(filename).suffix.lower() not in {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Unsupported video format.")
+
+    with tempfile.TemporaryDirectory(prefix="aslam-audio-extract-") as temp_dir:
+        root = Path(temp_dir)
+        source_path = root / filename
+        audio_path = root / "dubbed-audio.wav"
+        try:
+            size = 0
+            with source_path.open("wb") as output:
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Local worker limit is 1 GB.")
+                    output.write(chunk)
+            if size == 0:
+                raise HTTPException(status_code=400, detail="Video file is empty.")
+
+            ffmpeg = shutil.which("ffmpeg")
+            if not ffmpeg:
+                raise HTTPException(status_code=500, detail="FFmpeg is not installed.")
+            result = subprocess.run(
+                [ffmpeg, "-y", "-i", str(source_path), "-vn", "-ac", "1",
+                 "-ar", "16000", "-c:a", "pcm_s16le", str(audio_path)],
+                capture_output=True, text=True, timeout=60 * 60,
+            )
+            if result.returncode != 0 or not audio_path.exists():
+                raise HTTPException(status_code=422, detail="Could not extract dubbed audio.")
+            return Response(
+                content=audio_path.read_bytes(),
+                media_type="audio/wav",
+                headers={"Content-Disposition": 'attachment; filename="aslam-ai-dubbed.wav"'},
+            )
+        except HTTPException:
+            raise
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=408, detail="Audio extraction timed out.")
+        except Exception as exc:
+            print("Dubbed audio extraction error:", repr(exc))
+            raise HTTPException(status_code=500, detail="Could not extract dubbed audio.")
+        finally:
+            await video.close()
+
+
 @app.post("/lip-sync")
 async def lip_sync(
     video: UploadFile = File(...),
