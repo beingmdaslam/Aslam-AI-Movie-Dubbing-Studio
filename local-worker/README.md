@@ -100,7 +100,29 @@ Example multipart fields in `/docs`:
 - `language`: `hi`
 - `reference_audio`: a clean voice sample
 
-## 6. Export subtitle files
+## 6. Render character voices into the movie
+
+`POST /dub-audio` creates each dialogue line with XTTS-v2 using the voice sample assigned to that segment's `speakerId`, delays the line to its `start` timestamp, mixes all generated dialogue with the original soundtrack, and returns an MP4. The video stream is copied without re-encoding; audio is encoded as AAC.
+
+Multipart fields:
+- `video`: source video file
+- `segments_json`: JSON array; each item must include `start`, `text`, and `speakerId` (up to 300 lines)
+- `speaker_ids_json`: JSON array of unique speaker IDs, in the same order as the voice sample files
+- `voice_samples`: one WAV/MP3/M4A/FLAC/OGG file for each speaker ID (up to 20 MB each)
+- `language`: XTTS language code such as `hi`, `ar`, or `en`
+- `background_volume`: original soundtrack volume from `0.0` to `1.0` (default `0.18`)
+
+Example `segments_json`:
+```json
+[
+  {"start": 1.25, "text": "नमस्ते, आप कैसे हैं?", "speakerId": "speaker_01"},
+  {"start": 4.8, "text": "मैं बिल्कुल ठीक हूँ।", "speakerId": "speaker_02"}
+]
+```
+
+This first version starts each generated line at the supplied timestamp but does not time-stretch it to fit the original line duration. Long generated dialogue can overlap later dialogue. Listen to the result and adjust the translated script/timing before final use. The video must contain an audio track. Rendering is CPU-heavy and the response is the complete MP4, so large movies require substantial RAM and disk space.
+
+## 7. Export subtitle files
 
 Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
 
