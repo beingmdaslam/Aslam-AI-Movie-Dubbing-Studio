@@ -32,25 +32,24 @@ footer{text-align:center;color:#888;font-size:12px;padding:12px 0 28px}
 <div><label for="target">Dub into</label><select id="target"><option value="hi">Hindi</option><option value="en">English</option><option value="ar">Arabic</option><option value="fr">French</option><option value="es">Spanish</option><option value="de">German</option><option value="zh-cn">Chinese</option><option value="ja">Japanese</option><option value="tr">Turkish</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="it">Italian</option></select></div>
 </div>
 <label for="background">Original soundtrack volume: <span id="volumeValue">18%</span></label><input id="background" type="range" min="0" max="100" value="18">
-<p class="muted">Demucs separation is used when installed. Otherwise the original soundtrack is reduced, so original dialogue may still be audible. XTTS supports only selected target languages.</p><label><input id="lipSync" type="checkbox" style="width:auto"> Apply optional Wav2Lip lip-sync (requires separately installed model and checkpoint)</label>
+<p class="muted">Demucs separation is used when installed. Otherwise the original soundtrack is reduced, so original dialogue may still be audible. Translation language availability depends on free Argos models.</p><label><input id="lipSync" type="checkbox" style="width:auto"> Apply optional Wav2Lip lip-sync (requires separately installed model and checkpoint)</label>
 <button id="analyze" class="full">ANALYZE VIDEO & DETECT CHARACTERS</button>
 <div id="status" class="status" role="status">Start the local worker, then select a video.</div>
 </section>
 
 <section class="panel" id="review">
 <h2>2. Review speakers and translated dialogue</h2>
-<p class="muted">Review character groups and translated dialogue. Upload a voice sample you own or have permission to use for each character. Voice matching runs locally; the first run downloads its model.</p>
+<p class="muted">Voice cloning is intentionally excluded. Review the detected character groups, correct speaker labels and edit translated dialogue before exporting subtitles.</p>
 <div id="speakers"></div>
 <h3 style="margin-top:18px">Dialogue review</h3>
 <div id="lines"></div>
 <div class="grid" style="margin-top:14px">
 <button id="exportSrt">EXPORT SUBTITLES (SRT)</button>
 <button id="burnSubtitles">BURN SUBTITLES INTO VIDEO</button>
-<button id="generateDub" style="grid-column:1/-1">GENERATE DUBBED VIDEO WITH VOICE MATCHING</button>
 </div>
 <label for="dubbedAudio">Existing dubbed audio for Wav2Lip (WAV, MP3, M4A or FLAC)</label>
 <input id="dubbedAudio" type="file" accept=".wav,.mp3,.m4a,.flac,audio/*">
-<p class="muted">Wav2Lip only synchronizes mouth movement. Voice matching is handled above using reference samples with permission.</p>
+<p class="muted">Upload audio already dubbed by a permitted tool or recorded by you. Wav2Lip only synchronizes mouth movement; it does not create or clone voices.</p>
 <button id="runLipSync" class="full">RUN WAV2LIP LIP-SYNC</button>
 </section>
 
@@ -106,7 +105,7 @@ async function analyze(){
   }
   renderReview();
   $("review").style.display="block";
-  status("Analysis complete. Review character labels, edit dialogue and add voice samples.");
+  status("Analysis complete. Review character labels and edit translated dialogue.");
   $("review").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy(analyzeBtn,false);}
@@ -119,8 +118,6 @@ function renderReview(){
   const card=document.createElement("div");card.className="speaker";
   const heading=document.createElement("h3");heading.textContent=sp.label||sp.speakerId;card.appendChild(heading);
   const id=document.createElement("p");id.className="muted";id.textContent=sp.speakerId;card.appendChild(id);
-  const sampleLabel=document.createElement("label");sampleLabel.textContent="Reference voice sample (WAV / MP3 / M4A / FLAC / OGG)";card.appendChild(sampleLabel);
-  const sample=document.createElement("input");sample.type="file";sample.accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*";sample.dataset.speakerId=sp.speakerId;sample.setAttribute("aria-label","Reference voice sample for "+(sp.label||sp.speakerId));card.appendChild(sample);
   speakerBox.appendChild(card);
  });
  const lines=$("lines");lines.replaceChildren();
@@ -159,38 +156,6 @@ async function burnSubtitles(){
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy($("burnSubtitles"),false);}
 }
-async function generateDubbedVideo(){
- const file=videoInput.files&&videoInput.files[0];
- if(!file){status("Select the original video first.");return;}
- if(!translatedSegments.length){status("Analyze a video and review its dialogue first.");return;}
- const speakerIds=[...new Set(translatedSegments.map(s=>s.speakerId||"speaker_unknown"))];
- const sampleInputs=[...document.querySelectorAll("input[data-speaker-id]")];
- const samples=new Map(sampleInputs.map(input=>[input.dataset.speakerId,input.files&&input.files[0]]));
- for(const id of speakerIds){
-  const sample=samples.get(id);
-  if(!sample){status("Add a permitted reference voice sample for "+id+" before generating the dubbed video.");return;}
-  if(sample.size>20*1024*1024){status("Each voice sample must be 20 MB or smaller.");return;}
- }
- const language=$("target").value;
- setBusy($("generateDub"),true,"GENERATING LOCAL VOICES & VIDEO...");
- try{
-  const available=await (await checkedFetch("/tts/languages")).json();
-  if(!available.languages.includes(language))throw new Error("XTTS does not support the selected language code: "+language);
-  const form=new FormData();
-  form.append("video",processedVideoBlob||file,processedVideoBlob?"aslam-ai-current.mp4":file.name);
-  form.append("segments_json",JSON.stringify(translatedSegments));
-  form.append("speaker_ids_json",JSON.stringify(speakerIds));
-  speakerIds.forEach(id=>form.append("voice_samples",samples.get(id)));
-  form.append("language",language);
-  form.append("background_volume",String(Number($("background").value)/100));
-  status("Generating character voices and mixing the dubbed video locally. This can take a long time on CPU...");
-  const response=await checkedFetch("/dub-audio",{method:"POST",body:form});
-  const blob=await response.blob();processedVideoBlob=blob;
-  showResult("Locally generated dubbed video is ready. Character voices were matched from the reference samples you supplied.",blob,"aslam-ai-dubbed.mp4");
-  status("Dubbed video is ready to download.");
- }catch(e){status("ERROR: "+e.message);}
- finally{setBusy($("generateDub"),false);}
-}
 async function runLipSync(){
  const file=videoInput.files&&videoInput.files[0];const audio=$("dubbedAudio").files&&$("dubbedAudio").files[0];
  if(!file){status("Select the original face video first.");return;}
@@ -206,7 +171,7 @@ async function runLipSync(){
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy($("runLipSync"),false);}
 }
-analyzeBtn.addEventListener("click",analyze);$("exportSrt").addEventListener("click",exportSubtitles);$("burnSubtitles").addEventListener("click",burnSubtitles);$("generateDub").addEventListener("click",generateDubbedVideo);$("runLipSync").addEventListener("click",runLipSync);
+analyzeBtn.addEventListener("click",analyze);$("exportSrt").addEventListener("click",exportSubtitles);$("burnSubtitles").addEventListener("click",burnSubtitles);$("runLipSync").addEventListener("click",runLipSync);
 window.addEventListener("beforeunload",()=>{if(srtUrl)URL.revokeObjectURL(srtUrl);if($("download").dataset.url)URL.revokeObjectURL($("download").dataset.url);});
 </script>
 </body>
