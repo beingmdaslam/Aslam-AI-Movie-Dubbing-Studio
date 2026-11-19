@@ -206,6 +206,53 @@ finally:
 print("Argos route tests passed: direct translation and two-step English-pivot translation.")
 
 
+# Verify that the model installer selects both required packages for a
+# source -> English -> target route and installs the packages in order.
+class FakePackage:
+    def __init__(self, from_code, to_code):
+        self.from_code = from_code
+        self.to_code = to_code
+
+    def download(self):
+        return f"{self.from_code}-{self.to_code}.argosmodel"
+
+installed_paths = []
+fake_package_api = types.ModuleType("argostranslate.package")
+fake_package_api.update_package_index = lambda: None
+fake_package_api.get_available_packages = lambda: [
+    FakePackage("fr", "en"),
+    FakePackage("en", "hi"),
+]
+fake_package_api.install_from_path = lambda path: installed_paths.append(path)
+fake_argos_package_root = types.ModuleType("argostranslate")
+fake_argos_package_root.__path__ = []
+fake_argos_package_root.package = fake_package_api
+previous_package_modules = {
+    key: sys.modules.get(key)
+    for key in ("argostranslate", "argostranslate.package")
+}
+sys.modules["argostranslate"] = fake_argos_package_root
+sys.modules["argostranslate.package"] = fake_package_api
+try:
+    from worker import InstallTranslationRequest
+    install_response = client.post(
+        "/translation/install",
+        json={"sourceLanguage": "fr", "targetLanguage": "hi"},
+    )
+    assert install_response.status_code == 200, install_response.text
+    install_json = install_response.json()
+    assert install_json["route"] == "via English", install_json
+    assert installed_paths == ["fr-en.argosmodel", "en-hi.argosmodel"], installed_paths
+finally:
+    for key, value in previous_package_modules.items():
+        if value is None:
+            sys.modules.pop(key, None)
+        else:
+            sys.modules[key] = value
+
+print("Argos installer test passed: both English-pivot packages are selected and installed in order.")
+
+
 # Wav2Lip must fail clearly and safely when the optional local checkout or
 # checkpoint has not been configured; no external service is contacted.
 import os
