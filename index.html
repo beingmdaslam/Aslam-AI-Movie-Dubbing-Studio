@@ -121,7 +121,7 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 <div id="videoInfo" aria-live="polite">No video selected yet.</div>
 </div>
 
-<p class="note" id="qualityNote">Your original video preview is displayed without intentional quality reduction. Actual AI dubbing, voice matching, lip sync and HD/4K export require a connected processing engine.</p>
+<p class="note" id="qualityNote">Your original video preview is displayed without intentional quality reduction. AI processing runs locally on your computer through the free ASLAM AI Local Studio; start the local worker before dubbing.</p>
 <button type="button" id="startButton">START AI DUBBING</button>
 <p class="note" id="status" aria-live="polite"></p>
 </section>
@@ -291,7 +291,7 @@ preview.addEventListener("error", function() {
 });
 
 /* CLOUDFLARE R2 VIDEO UPLOAD - existing Netlify endpoint flow retained */
-startButton.addEventListener("click", async function() {
+startButton.addEventListener("click", function() {
   const t = translations[appLanguage.value] || translations.en;
   const file = fileInput.files && fileInput.files[0];
 
@@ -299,76 +299,13 @@ startButton.addEventListener("click", async function() {
     statusText.textContent = t.empty;
     return;
   }
-  if (!file.type.startsWith("video/") && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
-    statusText.textContent = "Please select a valid video file.";
-    return;
-  }
-  if (file.size > 3 * 1024 * 1024 * 1024) {
-    statusText.textContent = "Maximum upload size for the current AI dubbing engine is 3 GB.";
-    return;
-  }
 
-  startButton.disabled = true;
-  startButton.textContent = "PREPARING UPLOAD...";
-
-  try {
-    const response = await fetch("/.netlify/functions/create-upload", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        fileName: file.name,
-        contentType: file.type || "application/octet-stream",
-        fileSize: file.size
-      })
-    });
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (_) {
-      throw new Error("Upload server returned an invalid response.");
-    }
-
-    if (!response.ok || !data.uploadUrl || !data.key) {
-      throw new Error(data.error || "Could not create upload URL.");
-    }
-
-    statusText.textContent = "Uploading video: 0%";
-
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", data.uploadUrl, true);
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-
-      xhr.upload.onprogress = function(event) {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          statusText.textContent = "Uploading video: " + percent + "%";
-        }
-      };
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("R2 upload failed. HTTP " + xhr.status));
-      };
-      xhr.onerror = function() {
-        reject(new Error("Network or CORS error. Please check connection."));
-      };
-      xhr.onabort = function() {
-        reject(new Error("Upload was cancelled."));
-      };
-      xhr.send(file);
-    });
-
-    statusText.textContent =
-      "Video uploaded successfully! Storage ID: " + data.key +
-      ". Free local AI processing worker is being prepared.";
-  } catch(error) {
-    statusText.textContent = "Upload failed: " + error.message;
-  } finally {
-    startButton.disabled = false;
-    startButton.textContent = t.start;
-  }
+  // All AI processing is local. Do not upload the movie to R2 or a paid cloud API.
+  statusText.textContent =
+    "Opening the free local studio. If it does not open, start local-worker/start-windows.bat on your computer first. Select the video again in the local studio.";
+  window.open("http://127.0.0.1:8765/studio", "_blank");
 });
+
 
 window.addEventListener("beforeunload", function() {
   if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
