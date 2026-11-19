@@ -111,7 +111,7 @@ function renderReview(){
   const heading=document.createElement("h3");heading.textContent=sp.label||sp.speakerId;card.appendChild(heading);
   const id=document.createElement("p");id.className="muted";id.textContent=sp.speakerId;card.appendChild(id);
   const label=document.createElement("label");label.textContent="Voice sample for this character";card.appendChild(label);
-  const input=document.createElement("input");input.type="file";input.accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*";input.dataset.speaker=sp.speakerId;input.id="voice_"+index;card.appendChild(input);
+  const input=document.createElement("input");input.type="file";input.accept=".wav,.mp3,.m4a,.flac,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg";input.dataset.speaker=sp.speakerId;input.id="voice_"+index;card.appendChild(input);
   speakerBox.appendChild(card);
  });
  const lines=$("lines");lines.replaceChildren();
