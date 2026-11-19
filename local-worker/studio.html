@@ -138,6 +138,10 @@ async function render(){
  try{
   const readiness=await (await checkedFetch("/system/check")).json();
   if(!readiness.checks?.xttsPackage?.available)throw new Error("XTTS voice engine is not installed. Close the worker and run install-voice-windows.bat.");
+  if($("lipSync").checked){
+   const lipReady=await (await checkedFetch("/lip-sync/status")).json();
+   if(!lipReady.configured)throw new Error(lipReady.message+" Configure WAV2LIP_DIR and WAV2LIP_CHECKPOINT, then restart the worker. Dubbing was not started.");
+  }
  }catch(e){status("ERROR: "+e.message);setBusy(renderBtn,false);return;}
  setBusy(renderBtn,true,"GENERATING CHARACTER VOICES...");
  try{
