@@ -89,7 +89,11 @@ Call `POST /diarize` and upload a video. The worker extracts audio, transcribes 
 
 Automatic diarization is approximate: short utterances may be marked `speaker_unknown`, and similar-sounding characters may be grouped together. Review and correct speaker labels before assigning cloned/generated voices. It does not identify a real person's identity.
 
-## 5. Generate dialogue with a reference voice (XTTS-v2)
+## 5. Review and correct speaker labels
+
+Use `POST /speakers/assign` with the transcript segments and an `assignments` object mapping detected IDs to the final character IDs. Example: `{\"segments\":[{\"start\":1,\"end\":2,\"text\":\"Hello\",\"speakerId\":\"speaker_01\"}],\"assignments\":{\"speaker_01\":\"hero\",\"speaker_unknown\":\"hero\"}}`. The response returns corrected segments; use those in `/dub-audio`.
+
+## 6. Generate dialogue with a reference voice (XTTS-v2)
 
 The local `POST /tts/clone` endpoint accepts multipart form fields `text` and `language`, plus a `reference_audio` file (WAV/MP3/M4A/FLAC/OGG, up to 20 MB). It returns a WAV file generated to resemble the supplied voice sample. Check supported language codes with `GET /tts/languages`. Hindi (`hi`), Arabic (`ar`) and English (`en`) are included by the model; quality varies and each language should be tested.
 
@@ -100,7 +104,7 @@ Example multipart fields in `/docs`:
 - `language`: `hi`
 - `reference_audio`: a clean voice sample
 
-## 6. Render character voices into the movie
+## 7. Render character voices into the movie
 
 `POST /dub-audio` creates each dialogue line with XTTS-v2 using the voice sample assigned to that segment's `speakerId`, delays the line to its `start` timestamp, mixes all generated dialogue with the original soundtrack, and returns an MP4. The video stream is copied without re-encoding; audio is encoded as AAC.
 
@@ -122,15 +126,15 @@ Example `segments_json`:
 
 This first version starts each generated line at the supplied timestamp but does not time-stretch it to fit the original line duration. Long generated dialogue can overlap later dialogue. Listen to the result and adjust the translated script/timing before final use. The video must contain an audio track. Rendering is CPU-heavy and the response is the complete MP4, so large movies require substantial RAM and disk space.
 
-## 7. Export subtitle files
+## 8. Export subtitle files
 
 Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
 
-## 8. Burn subtitles into the video
+## 9. Burn subtitles into the video
 
 `POST /subtitles/burn-in` accepts a video file, an SRT subtitle file and optional `font_size` (12–48; default 24). FFmpeg renders the subtitles into the picture and returns an MP4. This re-encodes the video and can take substantial CPU time. FFmpeg must include the `subtitles`/libass filter; use a UTF-8 SRT file.
 
-## 9. Optional local lip-sync (Wav2Lip)
+## 10. Optional local lip-sync (Wav2Lip)
 
 `POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
 
