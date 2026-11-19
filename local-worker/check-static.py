@@ -44,7 +44,6 @@ required_routes = [
     '@app.post("/translation/install")',
     '@app.post("/speakers/assign")',
     '@app.post("/subtitles/burn-in")',
-    '@app.post("/audio/extract")',
     '@app.get("/lip-sync/status")',
     '@app.post("/lip-sync")',
 ]
