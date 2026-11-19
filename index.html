@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +13,9 @@ header p{color:#aaa;letter-spacing:2px;margin-top:9px}
 main{max-width:850px;margin:auto;padding:15px}
 .features{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .feature{background:linear-gradient(145deg,#191919,#0d0d0d);border:1px solid #552020;border-radius:17px;padding:20px 10px;text-align:center;box-shadow:0 0 15px #650b0b33}
+.feature.video-feature{cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.feature.video-feature:focus-visible{outline:2px solid #ff4545;outline-offset:3px}
+.feature.video-feature:active{border-color:#ff4545;box-shadow:0 0 20px #ff202066}
 .icon{font-size:38px;display:block;margin-bottom:12px}
 .movie{animation:bounce 1.5s infinite}
 .globe{animation:spin 5s linear infinite}
@@ -29,13 +31,17 @@ main{max-width:850px;margin:auto;padding:15px}
 .panel{margin-top:22px;padding:20px;background:#121212;border:1px solid #572020;border-radius:16px}
 h2{font-size:19px;color:#ff4545;margin-top:0}
 label{display:block;margin:15px 0 8px;color:#ddd;font-size:14px}
-select,input{width:100%;padding:13px;background:#090909;color:white;border:1px solid #8c2929;border-radius:9px;font-size:15px}
+select{width:100%;padding:13px;background:#090909;color:white;border:1px solid #8c2929;border-radius:9px;font-size:15px}
 .upload{border:1px dashed #ff3333;padding:18px;border-radius:12px;text-align:center;margin-top:15px}
+#selectVideoButton{width:100%;padding:15px;margin:0;border:1px solid #ff4545;border-radius:10px;background:linear-gradient(90deg,#650000,#b91c1c);color:white;font-size:15px;font-weight:bold;cursor:pointer}
+#selectVideoButton:active{transform:scale(.99)}
+/* Keep the file input available to mobile browsers while visually hiding it. */
+#videoFile{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 video{display:block;width:100%;height:auto;max-height:65vh;object-fit:contain;margin-top:15px;border-radius:10px;background:#000}
 .note{font-size:12px;color:#aaa;line-height:1.5}
 #videoInfo{font-size:12px;color:#ccc;line-height:1.7;margin-top:10px;overflow-wrap:anywhere}
-button{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold}
-button:disabled{opacity:.6;cursor:wait}
+#startButton{width:100%;padding:15px;margin-top:18px;border:0;border-radius:10px;background:linear-gradient(90deg,#a90000,#ff3030);color:white;font-size:16px;font-weight:bold;cursor:pointer}
+#startButton:disabled{opacity:.6;cursor:wait}
 footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 .chip{width:58px;height:42px;margin:0 auto 12px;border:2px solid #a9a9a9;border-radius:6px;background:linear-gradient(135deg,#444,#111);box-shadow:0 0 14px #f22;position:relative}
 .chip:before{content:"";position:absolute;inset:7px;border:1px solid #aaa;border-radius:2px}
@@ -45,7 +51,6 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 </style>
 </head>
 <body>
-
 <header>
 <h1>ASLAM AI</h1>
 <p>MOVIE DUBBING STUDIO</p>
@@ -53,10 +58,10 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 
 <main>
 <section class="features">
-<div class="feature">
+<div class="feature video-feature" id="videoUploadCard" role="button" tabindex="0" aria-label="Open video gallery to select a movie or video">
 <span class="icon movie">🎬</span>
 <h3>Video Upload</h3>
-<p>Upload Movie / Video</p>
+<p>Tap to select Movie / Video</p>
 </div>
 <div class="feature">
 <span class="icon globe">🌍</span>
@@ -71,7 +76,7 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 <div class="feature">
 <span class="icon lips">🫦</span>
 <h3>AI Lip Sync</h3>
-<p>Natural & Perfect Matching</p>
+<p>Natural &amp; Perfect Matching</p>
 </div>
 </section>
 
@@ -109,14 +114,13 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 </select>
 
 <div class="upload">
-<label for="videoFile" id="uploadLabel">📁 Select Movie / Video</label>
-<input type="file" id="videoFile" accept="video/*">
+<button type="button" id="selectVideoButton">📁 Select Movie / Video</button>
+<input type="file" id="videoFile" accept="video/*,.mkv,.mov,.mp4,.webm">
 <video id="preview" controls playsinline webkit-playsinline preload="metadata" hidden></video>
-<div id="videoInfo">No video selected yet.</div>
+<div id="videoInfo" aria-live="polite">No video selected yet.</div>
 </div>
 
 <p class="note" id="qualityNote">Your original video preview is displayed without intentional quality reduction. Actual AI dubbing, voice matching, lip sync and HD/4K export require a connected processing engine.</p>
-
 <button type="button" id="startButton">START AI DUBBING</button>
 <p class="note" id="status" aria-live="polite"></p>
 </section>
@@ -131,165 +135,40 @@ footer{text-align:center;padding:35px 10px;color:#bbb;font-size:13px}
 "use strict";
 
 const languages = [
-["af","Afrikaans"],["sq","Albanian"],["am","Amharic"],
-["ar","Arabic"],["hy","Armenian"],["az","Azerbaijani"],
-["eu","Basque"],["bn","Bengali"],["bs","Bosnian"],
-["bg","Bulgarian"],["my","Burmese"],["ca","Catalan"],
-["zh","Chinese"],["hr","Croatian"],["cs","Czech"],
-["da","Danish"],["nl","Dutch"],["en","English"],
-["et","Estonian"],["fi","Finnish"],["fr","French"],
-["gl","Galician"],["ka","Georgian"],["de","German"],
-["el","Greek"],["gu","Gujarati"],["ha","Hausa"],
-["he","Hebrew"],["hi","Hindi"],["hu","Hungarian"],
-["is","Icelandic"],["id","Indonesian"],["ga","Irish"],
-["it","Italian"],["ja","Japanese"],["jv","Javanese"],
-["kn","Kannada"],["kk","Kazakh"],["km","Khmer"],
-["ko","Korean"],["lo","Lao"],["lv","Latvian"],
-["lt","Lithuanian"],["mk","Macedonian"],["ms","Malay"],
-["ml","Malayalam"],["mr","Marathi"],["mn","Mongolian"],
-["ne","Nepali"],["no","Norwegian"],["fa","Persian"],
-["pl","Polish"],["pt","Portuguese"],["pa","Punjabi"],
-["ro","Romanian"],["ru","Russian"],["sr","Serbian"],
-["si","Sinhala"],["sk","Slovak"],["sl","Slovenian"],
-["so","Somali"],["es","Spanish"],["sw","Swahili"],
-["sv","Swedish"],["tl","Tagalog"],["ta","Tamil"],
-["te","Telugu"],["th","Thai"],["tr","Turkish"],
-["uk","Ukrainian"],["ur","Urdu"],["uz","Uzbek"],
+["af","Afrikaans"],["sq","Albanian"],["am","Amharic"],["ar","Arabic"],
+["hy","Armenian"],["az","Azerbaijani"],["eu","Basque"],["bn","Bengali"],
+["bs","Bosnian"],["bg","Bulgarian"],["my","Burmese"],["ca","Catalan"],
+["zh","Chinese"],["hr","Croatian"],["cs","Czech"],["da","Danish"],
+["nl","Dutch"],["en","English"],["et","Estonian"],["fi","Finnish"],
+["fr","French"],["gl","Galician"],["ka","Georgian"],["de","German"],
+["el","Greek"],["gu","Gujarati"],["ha","Hausa"],["he","Hebrew"],
+["hi","Hindi"],["hu","Hungarian"],["is","Icelandic"],["id","Indonesian"],
+["ga","Irish"],["it","Italian"],["ja","Japanese"],["jv","Javanese"],
+["kn","Kannada"],["kk","Kazakh"],["km","Khmer"],["ko","Korean"],
+["lo","Lao"],["lv","Latvian"],["lt","Lithuanian"],["mk","Macedonian"],
+["ms","Malay"],["ml","Malayalam"],["mr","Marathi"],["mn","Mongolian"],
+["ne","Nepali"],["no","Norwegian"],["fa","Persian"],["pl","Polish"],
+["pt","Portuguese"],["pa","Punjabi"],["ro","Romanian"],["ru","Russian"],
+["sr","Serbian"],["si","Sinhala"],["sk","Slovak"],["sl","Slovenian"],
+["so","Somali"],["es","Spanish"],["sw","Swahili"],["sv","Swedish"],
+["tl","Tagalog"],["ta","Tamil"],["te","Telugu"],["th","Thai"],
+["tr","Turkish"],["uk","Ukrainian"],["ur","Urdu"],["uz","Uzbek"],
 ["vi","Vietnamese"],["cy","Welsh"],["zu","Zulu"]
 ];
 
 const translations = {
-en:{
-app:"App Language",video:"Video Language",auto:"Auto Detect",
-target:"Target Language",quality:"Output Quality",
-original:"Original Quality",upload:"📁 Select Movie / Video",
-none:"No video selected yet.",note:"Your original video preview is displayed without intentional quality reduction. Actual AI dubbing, voice matching, lip sync and HD/4K export require a connected processing engine.",
-start:"START AI DUBBING",empty:"Please select a video first.",
-loading:"Loading video preview...",failed:"Preview failed. Try an MP4 video with H.264 encoding.",
-ready:"Video selected. AI dubbing engine is not connected yet.",
-studio:"🎞️ Movie Dubbing Studio"
-},
-hi:{
-app:"ऐप की भाषा",video:"वीडियो की भाषा",auto:"अपने आप पहचानें",
-target:"डबिंग की भाषा",quality:"आउटपुट क्वालिटी",
-original:"मूल क्वालिटी",upload:"📁 मूवी / वीडियो चुनें",
-none:"अभी कोई वीडियो नहीं चुना गया है।",
-note:"आपका मूल वीडियो बिना जानबूझकर क्वालिटी घटाए Preview में दिखेगा। असली AI डबिंग, आवाज़ मिलान, लिप सिंक और HD/4K Export के लिए Processing Engine चाहिए।",
-start:"AI डबिंग शुरू करें",empty:"पहले वीडियो चुनें।",
-loading:"वीडियो Preview लोड हो रहा है...",failed:"Preview नहीं चला। H.264 वाला MP4 वीडियो आज़माएँ।",
-ready:"वीडियो चुना गया। AI Dubbing Engine अभी जुड़ा नहीं है।",
-studio:"🎞️ मूवी डबिंग स्टूडियो"
-},
-ar:{
-app:"لغة التطبيق",video:"لغة الفيديو",auto:"كشف تلقائي",
-target:"اللغة المستهدفة",quality:"جودة الإخراج",
-original:"الجودة الأصلية",upload:"📁 اختر الفيلم / الفيديو",
-none:"لم يتم اختيار فيديو بعد.",
-note:"تتم معاينة الفيديو الأصلي دون تقليل متعمد للجودة. تتطلب الدبلجة بالذكاء الاصطناعي ومزامنة الشفاه محرك معالجة متصلاً.",
-start:"ابدأ الدبلجة",empty:"يرجى اختيار فيديو أولاً.",
-loading:"جارٍ تحميل معاينة الفيديو...",failed:"تعذرت المعاينة. جرّب فيديو MP4 بترميز H.264.",
-ready:"تم اختيار الفيديو. محرك الدبلجة غير متصل بعد.",
-studio:"🎞️ استوديو دبلجة الأفلام"
-},
-ur:{
-app:"ایپ کی زبان",video:"ویڈیو کی زبان",auto:"خودکار شناخت",
-target:"ڈبنگ کی زبان",quality:"آؤٹ پٹ کوالٹی",
-original:"اصل کوالٹی",upload:"📁 فلم / ویڈیو منتخب کریں",
-none:"ابھی کوئی ویڈیو منتخب نہیں کی گئی۔",
-note:"اصل ویڈیو کی کوالٹی جان بوجھ کر کم کیے بغیر Preview دکھایا جائے گا۔ AI ڈبنگ اور HD/4K Export کے لیے Processing Engine ضروری ہے۔",
-start:"AI ڈبنگ شروع کریں",empty:"پہلے ویڈیو منتخب کریں۔",
-loading:"ویڈیو Preview لوڈ ہو رہا ہے...",failed:"Preview ناکام ہوا۔ H.264 MP4 ویڈیو آزمائیں۔",
-ready:"ویڈیو منتخب ہو گئی۔ AI Dubbing Engine ابھی منسلک نہیں ہے۔",
-studio:"🎞️ مووی ڈبنگ اسٹوڈیو"
-},
-fr:{
-app:"Langue de l’application",video:"Langue vidéo",auto:"Détection automatique",
-target:"Langue cible",quality:"Qualité de sortie",
-original:"Qualité originale",upload:"📁 Choisir une vidéo",
-none:"Aucune vidéo sélectionnée.",
-note:"L’aperçu conserve la qualité originale. Le doublage IA et l’export HD/4K nécessitent un moteur de traitement connecté.",
-start:"DÉMARRER LE DOUBLAGE",empty:"Veuillez d’abord choisir une vidéo.",
-loading:"Chargement de l’aperçu...",failed:"Échec de l’aperçu. Essayez un MP4 H.264.",
-ready:"Vidéo sélectionnée. Le moteur IA n’est pas connecté.",
-studio:"🎞️ Studio de doublage"
-},
-es:{
-app:"Idioma de la aplicación",video:"Idioma del vídeo",auto:"Detección automática",
-target:"Idioma de destino",quality:"Calidad de salida",
-original:"Calidad original",upload:"📁 Seleccionar vídeo",
-none:"No hay ningún vídeo seleccionado.",
-note:"La vista previa conserva la calidad original. El doblaje IA y la exportación HD/4K requieren un motor conectado.",
-start:"INICIAR DOBLAJE",empty:"Selecciona un vídeo primero.",
-loading:"Cargando vista previa...",failed:"Error de vista previa. Prueba un MP4 H.264.",
-ready:"Vídeo seleccionado. El motor de doblaje no está conectado.",
-studio:"🎞️ Estudio de doblaje"
-},
-de:{
-app:"App-Sprache",video:"Videosprache",auto:"Automatisch erkennen",
-target:"Zielsprache",quality:"Ausgabequalität",
-original:"Originalqualität",upload:"📁 Video auswählen",
-none:"Noch kein Video ausgewählt.",
-note:"Die Vorschau zeigt das Originalvideo. KI-Synchronisation und HD/4K-Export benötigen eine verbundene Verarbeitungsengine.",
-start:"DUBBING STARTEN",empty:"Bitte zuerst ein Video auswählen.",
-loading:"Video wird geladen...",failed:"Vorschau fehlgeschlagen. Bitte H.264-MP4 testen.",
-ready:"Video ausgewählt. Die KI-Engine ist noch nicht verbunden.",
-studio:"🎞️ Film-Dubbing-Studio"
-},
-zh:{
-app:"应用语言",video:"视频语言",auto:"自动检测",
-target:"目标语言",quality:"输出质量",
-original:"原始画质",upload:"📁 选择电影 / 视频",
-none:"尚未选择视频。",
-note:"预览显示原始视频。AI配音和HD/4K导出需要连接处理引擎。",
-start:"开始AI配音",empty:"请先选择视频。",
-loading:"正在加载视频预览...",failed:"预览失败，请尝试H.264编码的MP4。",
-ready:"已选择视频。AI配音引擎尚未连接。",
-studio:"🎞️ 电影配音工作室"
-},
-ja:{
-app:"アプリの言語",video:"動画の言語",auto:"自動検出",
-target:"吹き替え言語",quality:"出力画質",
-original:"オリジナル画質",upload:"📁 動画を選択",
-none:"動画が選択されていません。",
-note:"元の動画をプレビューします。AI吹き替えとHD/4K出力には処理エンジンが必要です。",
-start:"AI吹き替え開始",empty:"先に動画を選択してください。",
-loading:"プレビューを読み込み中...",failed:"プレビューできません。H.264 MP4をお試しください。",
-ready:"動画を選択しました。AIエンジンは未接続です。",
-studio:"🎞️ 映画吹き替えスタジオ"
-},
-bn:{
-app:"অ্যাপের ভাষা",video:"ভিডিওর ভাষা",auto:"স্বয়ংক্রিয় শনাক্তকরণ",
-target:"লক্ষ্য ভাষা",quality:"আউটপুট গুণমান",
-original:"মূল গুণমান",upload:"📁 ভিডিও নির্বাচন করুন",
-none:"এখনও কোনো ভিডিও নির্বাচন করা হয়নি।",
-note:"মূল ভিডিওর প্রিভিউ দেখানো হবে। AI ডাবিং ও HD/4K এক্সপোর্টের জন্য প্রসেসিং ইঞ্জিন দরকার।",
-start:"AI ডাবিং শুরু করুন",empty:"প্রথমে একটি ভিডিও নির্বাচন করুন।",
-loading:"ভিডিও প্রিভিউ লোড হচ্ছে...",failed:"প্রিভিউ ব্যর্থ হয়েছে। H.264 MP4 চেষ্টা করুন।",
-ready:"ভিডিও নির্বাচিত হয়েছে। AI ইঞ্জিন এখনও সংযুক্ত নয়।",
-studio:"🎞️ মুভি ডাবিং স্টুডিও"
-},
-tr:{
-app:"Uygulama dili",video:"Video dili",auto:"Otomatik algıla",
-target:"Hedef dil",quality:"Çıkış kalitesi",
-original:"Orijinal kalite",upload:"📁 Video seç",
-none:"Henüz video seçilmedi.",
-note:"Önizleme orijinal videoyu gösterir. Yapay zekâ dublajı ve HD/4K dışa aktarma için bağlı bir işlem motoru gerekir.",
-start:"DUBLAJI BAŞLAT",empty:"Önce bir video seçin.",
-loading:"Video önizlemesi yükleniyor...",failed:"Önizleme başarısız. H.264 MP4 deneyin.",
-ready:"Video seçildi. Yapay zekâ motoru henüz bağlı değil.",
-studio:"🎞️ Film Dublaj Stüdyosu"
-},
-pt:{
-app:"Idioma do aplicativo",video:"Idioma do vídeo",auto:"Detecção automática",
-target:"Idioma de destino",quality:"Qualidade de saída",
-original:"Qualidade original",upload:"📁 Selecionar vídeo",
-none:"Nenhum vídeo selecionado.",
-note:"A pré-visualização mantém o vídeo original. A dublagem IA e a exportação HD/4K exigem um motor de processamento conectado.",
-start:"INICIAR DUBLAGEM",empty:"Selecione um vídeo primeiro.",
-loading:"Carregando pré-visualização...",failed:"Falha na pré-visualização. Tente MP4 H.264.",
-ready:"Vídeo selecionado. O motor de IA ainda não está conectado.",
-studio:"🎞️ Estúdio de Dublagem"
-}
+en:{app:"App Language",video:"Video Language",auto:"Auto Detect",target:"Target Language",quality:"Output Quality",original:"Original Quality",upload:"📁 Select Movie / Video",none:"No video selected yet.",note:"Your original video preview is displayed without intentional quality reduction. Actual AI dubbing, voice matching, lip sync and HD/4K export require a connected processing engine.",start:"START AI DUBBING",empty:"Please select a video first.",loading:"Loading video preview...",failed:"Preview failed. Try an MP4 video with H.264 encoding.",ready:"Video selected. AI dubbing engine is not connected yet.",studio:"🎞️ Movie Dubbing Studio"},
+hi:{app:"ऐप की भाषा",video:"वीडियो की भाषा",auto:"अपने आप पहचानें",target:"डबिंग की भाषा",quality:"आउटपुट क्वालिटी",original:"मूल क्वालिटी",upload:"📁 मूवी / वीडियो चुनें",none:"अभी कोई वीडियो नहीं चुना गया है।",note:"आपका मूल वीडियो बिना जानबूझकर क्वालिटी घटाए Preview में दिखेगा। असली AI डबिंग, आवाज़ मिलान, लिप सिंक और HD/4K Export के लिए Processing Engine चाहिए।",start:"AI डबिंग शुरू करें",empty:"पहले वीडियो चुनें।",loading:"वीडियो Preview लोड हो रहा है...",failed:"Preview नहीं चला। H.264 वाला MP4 वीडियो आज़माएँ।",ready:"वीडियो चुना गया। AI Dubbing Engine अभी जुड़ा नहीं है।",studio:"🎞️ मूवी डबिंग स्टूडियो"},
+ar:{app:"لغة التطبيق",video:"لغة الفيديو",auto:"كشف تلقائي",target:"اللغة المستهدفة",quality:"جودة الإخراج",original:"الجودة الأصلية",upload:"📁 اختر الفيلم / الفيديو",none:"لم يتم اختيار فيديو بعد.",note:"تتم معاينة الفيديو الأصلي دون تقليل متعمد للجودة. تتطلب الدبلجة بالذكاء الاصطناعي ومزامنة الشفاه محرك معالجة متصلاً.",start:"ابدأ الدبلجة",empty:"يرجى اختيار فيديو أولاً.",loading:"جارٍ تحميل معاينة الفيديو...",failed:"تعذرت المعاينة. جرّب فيديو MP4 بترميز H.264.",ready:"تم اختيار الفيديو. محرك الدبلجة غير متصل بعد.",studio:"🎞️ استوديو دبلجة الأفلام"},
+ur:{app:"ایپ کی زبان",video:"ویڈیو کی زبان",auto:"خودکار شناخت",target:"ڈبنگ کی زبان",quality:"آؤٹ پٹ کوالٹی",original:"اصل کوالٹی",upload:"📁 فلم / ویڈیو منتخب کریں",none:"ابھی کوئی ویڈیو منتخب نہیں کی گئی۔",note:"اصل ویڈیو کی کوالٹی جان بوجھ کر کم کیے بغیر Preview دکھایا جائے گا۔ AI ڈبنگ اور HD/4K Export کے لیے Processing Engine ضروری ہے۔",start:"AI ڈبنگ شروع کریں",empty:"پہلے ویڈیو منتخب کریں۔",loading:"ویڈیو Preview لوڈ ہو رہا ہے...",failed:"Preview ناکام ہوا۔ H.264 MP4 ویڈیو آزمائیں۔",ready:"ویڈیو منتخب ہو گئی۔ AI Dubbing Engine ابھی منسلک نہیں ہے۔",studio:"🎞️ مووی ڈبنگ اسٹوڈیو"},
+fr:{app:"Langue de l’application",video:"Langue vidéo",auto:"Détection automatique",target:"Langue cible",quality:"Qualité de sortie",original:"Qualité originale",upload:"📁 Choisir une vidéo",none:"Aucune vidéo sélectionnée.",note:"L’aperçu conserve la qualité originale. Le doublage IA et l’export HD/4K nécessitent un moteur de traitement connecté.",start:"DÉMARRER LE DOUBLAGE",empty:"Veuillez d’abord choisir une vidéo.",loading:"Chargement de l’aperçu...",failed:"Échec de l’aperçu. Essayez un MP4 H.264.",ready:"Vidéo sélectionnée. Le moteur IA n’est pas connecté.",studio:"🎞️ Studio de doublage"},
+es:{app:"Idioma de la aplicación",video:"Idioma del vídeo",auto:"Detección automática",target:"Idioma de destino",quality:"Calidad de salida",original:"Calidad original",upload:"📁 Seleccionar vídeo",none:"No hay ningún vídeo seleccionado.",note:"La vista previa conserva la calidad original. El doblaje IA y la exportación HD/4K requieren un motor conectado.",start:"INICIAR DOBLAJE",empty:"Selecciona un vídeo primero.",loading:"Cargando vista previa...",failed:"Error de vista previa. Prueba un MP4 H.264.",ready:"Vídeo seleccionado. El motor de doblaje no está conectado.",studio:"🎞️ Estudio de doblaje"},
+de:{app:"App-Sprache",video:"Videosprache",auto:"Automatisch erkennen",target:"Zielsprache",quality:"Ausgabequalität",original:"Originalqualität",upload:"📁 Video auswählen",none:"Noch kein Video ausgewählt.",note:"Die Vorschau zeigt das Originalvideo. KI-Synchronisation und HD/4K-Export benötigen eine verbundene Verarbeitungsengine.",start:"DUBBING STARTEN",empty:"Bitte zuerst ein Video auswählen.",loading:"Video wird geladen...",failed:"Vorschau fehlgeschlagen. Bitte H.264-MP4 testen.",ready:"Video ausgewählt. Die KI-Engine ist noch nicht verbunden.",studio:"🎞️ Film-Dubbing-Studio"},
+zh:{app:"应用语言",video:"视频语言",auto:"自动检测",target:"目标语言",quality:"输出质量",original:"原始画质",upload:"📁 选择电影 / 视频",none:"尚未选择视频。",note:"预览显示原始视频。AI配音和HD/4K导出需要连接处理引擎。",start:"开始AI配音",empty:"请先选择视频。",loading:"正在加载视频预览...",failed:"预览失败，请尝试H.264编码的MP4。",ready:"已选择视频。AI配音引擎尚未连接。",studio:"🎞️ 电影配音工作室"},
+ja:{app:"アプリの言語",video:"動画の言語",auto:"自動検出",target:"吹き替え言語",quality:"出力画質",original:"オリジナル画質",upload:"📁 動画を選択",none:"動画が選択されていません。",note:"元の動画をプレビューします。AI吹き替えとHD/4K出力には処理エンジンが必要です。",start:"AI吹き替え開始",empty:"先に動画を選択してください。",loading:"プレビューを読み込み中...",failed:"プレビューできません。H.264 MP4をお試しください。",ready:"動画を選択しました。AIエンジンは未接続です。",studio:"🎞️ 映画吹き替えスタジオ"},
+bn:{app:"অ্যাপের ভাষা",video:"ভিডিওর ভাষা",auto:"স্বয়ংক্রিয় শনাক্তকরণ",target:"লক্ষ্য ভাষা",quality:"আউটপুট গুণমান",original:"মূল গুণমান",upload:"📁 ভিডিও নির্বাচন করুন",none:"এখনও কোনো ভিডিও নির্বাচন করা হয়নি।",note:"মূল ভিডিওর প্রিভিউ দেখানো হবে। AI ডাবিং ও HD/4K এক্সপোর্টের জন্য প্রসেসিং ইঞ্জিন দরকার।",start:"AI ডাবিং শুরু করুন",empty:"প্রথমে একটি ভিডিও নির্বাচন করুন।",loading:"ভিডিও প্রিভিউ লোড হচ্ছে...",failed:"প্রিভিউ ব্যর্থ হয়েছে। H.264 MP4 চেষ্টা করুন।",ready:"ভিডিও নির্বাচিত হয়েছে। AI ইঞ্জিন এখনও সংযুক্ত নয়।",studio:"🎞️ মুভি ডাবিং স্টুডিও"},
+tr:{app:"Uygulama dili",video:"Video dili",auto:"Otomatik algıla",target:"Hedef dil",quality:"Çıkış kalitesi",original:"Orijinal kalite",upload:"📁 Video seç",none:"Henüz video seçilmedi.",note:"Önizleme orijinal videoyu gösterir. Yapay zekâ dublajı ve HD/4K dışa aktarma için bağlı bir işlem motoru gerekir.",start:"DUBLAJI BAŞLAT",empty:"Önce bir video seçin.",loading:"Video önizlemesi yükleniyor...",failed:"Önizleme başarısız. H.264 MP4 deneyin.",ready:"Video seçildi. Yapay zekâ motoru henüz bağlı değil.",studio:"🎞️ Film Dublaj Stüdyosu"},
+pt:{app:"Idioma do aplicativo",video:"Idioma do vídeo",auto:"Detecção automática",target:"Idioma de destino",quality:"Qualidade de saída",original:"Qualidade original",upload:"📁 Selecionar vídeo",none:"Nenhum vídeo selecionado.",note:"A pré-visualização mantém o vídeo original. A dublagem IA e a exportação HD/4K exigem um motor de processamento conectado.",start:"INICIAR DUBLAGEM",empty:"Selecione um vídeo primeiro.",loading:"Carregando pré-visualização...",failed:"Falha na pré-visualização. Tente MP4 H.264.",ready:"Vídeo selecionado. O motor de IA ainda não está conectado.",studio:"🎞️ Estúdio de Dublagem"}
 };
 
 const appLanguage = document.getElementById("appLanguage");
@@ -297,12 +176,28 @@ const sourceLanguage = document.getElementById("sourceLanguage");
 const targetLanguage = document.getElementById("targetLanguage");
 const quality = document.getElementById("quality");
 const fileInput = document.getElementById("videoFile");
+const selectVideoButton = document.getElementById("selectVideoButton");
+const videoUploadCard = document.getElementById("videoUploadCard");
 const preview = document.getElementById("preview");
 const videoInfo = document.getElementById("videoInfo");
 const statusText = document.getElementById("status");
 const startButton = document.getElementById("startButton");
 
 let currentVideoURL = null;
+
+function openGallery() {
+  // Must be called directly from a user click/tap for mobile browser permission.
+  fileInput.click();
+}
+
+selectVideoButton.addEventListener("click", openGallery);
+videoUploadCard.addEventListener("click", openGallery);
+videoUploadCard.addEventListener("keydown", function(event) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    openGallery();
+  }
+});
 
 function fillLanguages(select, includeAuto) {
   select.innerHTML = "";
@@ -327,37 +222,35 @@ targetLanguage.value = "hi";
 
 function updateLanguage() {
   const t = translations[appLanguage.value] || translations.en;
-
   document.getElementById("appLabel").textContent = t.app;
   document.getElementById("videoLabel").textContent = t.video;
   document.getElementById("targetLabel").textContent = t.target;
   document.getElementById("qualityLabel").textContent = t.quality;
-  document.getElementById("uploadLabel").textContent = t.upload;
+  selectVideoButton.textContent = t.upload;
   document.getElementById("studioTitle").textContent = t.studio;
   document.getElementById("qualityNote").textContent = t.note;
   startButton.textContent = t.start;
-
   sourceLanguage.options[0].textContent = t.auto;
-  quality.options[0].textContent = t.original;
-  videoInfo.textContent = fileInput.files && fileInput.files[0]
-    ? videoInfo.textContent : t.none;
+
+  if (!fileInput.files || !fileInput.files[0]) {
+    videoInfo.textContent = t.none;
+  }
 
   document.documentElement.lang = appLanguage.value;
-  document.documentElement.dir =
-    ["ar","ur"].includes(appLanguage.value) ? "rtl" : "ltr";
+  document.documentElement.dir = ["ar","ur"].includes(appLanguage.value) ? "rtl" : "ltr";
 }
 
 appLanguage.addEventListener("change", updateLanguage);
 updateLanguage();
 
-fileInput.addEventListener("change", function () {
+fileInput.addEventListener("change", function() {
   const file = fileInput.files && fileInput.files[0];
   const t = translations[appLanguage.value] || translations.en;
-
   if (!file) return;
 
-  if (!file.type.startsWith("video/")) {
+  if (!file.type.startsWith("video/") && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
     videoInfo.textContent = "Please select a valid video file.";
+    fileInput.value = "";
     return;
   }
 
@@ -373,23 +266,19 @@ fileInput.addEventListener("change", function () {
 
   videoInfo.textContent = t.loading;
   statusText.textContent = "";
-
   currentVideoURL = URL.createObjectURL(file);
   preview.src = currentVideoURL;
   preview.hidden = false;
   preview.load();
 });
 
-preview.addEventListener("loadedmetadata", function () {
+preview.addEventListener("loadedmetadata", function() {
   const file = fileInput.files && fileInput.files[0];
   if (!file) return;
 
-  const duration = Number.isFinite(preview.duration)
-    ? Math.floor(preview.duration) : 0;
-
+  const duration = Number.isFinite(preview.duration) ? Math.floor(preview.duration) : 0;
   const minutes = Math.floor(duration / 60);
   const seconds = duration % 60;
-
   videoInfo.textContent =
     "File: " + file.name +
     " | Size: " + (file.size / (1024 * 1024)).toFixed(1) + " MB" +
@@ -397,13 +286,13 @@ preview.addEventListener("loadedmetadata", function () {
     " | Duration: " + minutes + ":" + String(seconds).padStart(2, "0");
 });
 
-preview.addEventListener("error", function () {
+preview.addEventListener("error", function() {
   const t = translations[appLanguage.value] || translations.en;
   videoInfo.textContent = t.failed;
 });
 
-/* CLOUDflare R2 VIDEO UPLOAD */
-startButton.addEventListener("click", async function () {
+/* CLOUDFLARE R2 VIDEO UPLOAD - existing Netlify endpoint flow retained */
+startButton.addEventListener("click", async function() {
   const t = translations[appLanguage.value] || translations.en;
   const file = fileInput.files && fileInput.files[0];
 
@@ -411,12 +300,10 @@ startButton.addEventListener("click", async function () {
     statusText.textContent = t.empty;
     return;
   }
-
-  if (!file.type.startsWith("video/")) {
+  if (!file.type.startsWith("video/") && !/\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name)) {
     statusText.textContent = "Please select a valid video file.";
     return;
   }
-
   if (file.size > 5 * 1024 * 1024 * 1024) {
     statusText.textContent = "Maximum upload size is 5 GB.";
     return;
@@ -428,17 +315,20 @@ startButton.addEventListener("click", async function () {
   try {
     const response = await fetch("/.netlify/functions/create-upload", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
         fileName: file.name,
-        contentType: file.type,
+        contentType: file.type || "application/octet-stream",
         fileSize: file.size
       })
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      throw new Error("Upload server returned an invalid response.");
+    }
 
     if (!response.ok || !data.uploadUrl || !data.key) {
       throw new Error(data.error || "Could not create upload URL.");
@@ -448,39 +338,32 @@ startButton.addEventListener("click", async function () {
 
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-
       xhr.open("PUT", data.uploadUrl, true);
-      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
 
-      xhr.upload.onprogress = function (event) {
+      xhr.upload.onprogress = function(event) {
         if (event.lengthComputable) {
-          const percent = Math.round(
-            (event.loaded / event.total) * 100
-          );
+          const percent = Math.round((event.loaded / event.total) * 100);
           statusText.textContent = "Uploading video: " + percent + "%";
         }
       };
-
-      xhr.onload = function () {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          reject(new Error("R2 upload failed. HTTP " + xhr.status));
-        }
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("R2 upload failed. HTTP " + xhr.status));
       };
-
-      xhr.onerror = function () {
+      xhr.onerror = function() {
         reject(new Error("Network or CORS error. Please check connection."));
       };
-
+      xhr.onabort = function() {
+        reject(new Error("Upload was cancelled."));
+      };
       xhr.send(file);
     });
 
     statusText.textContent =
       "Video uploaded successfully! Storage ID: " + data.key +
       ". AI dubbing engine is not connected yet.";
-
-  } catch (error) {
+  } catch(error) {
     statusText.textContent = "Upload failed: " + error.message;
   } finally {
     startButton.disabled = false;
@@ -488,7 +371,7 @@ startButton.addEventListener("click", async function () {
   }
 });
 
-window.addEventListener("beforeunload", function () {
+window.addEventListener("beforeunload", function() {
   if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
 });
 </script>
