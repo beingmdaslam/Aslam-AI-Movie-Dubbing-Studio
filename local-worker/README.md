@@ -154,6 +154,10 @@ Call `POST /subtitles/srt` with the translated segments. The endpoint returns a 
 - Face detector weights: `WAV2LIP_DIR/face_detection/detection/sfd/s3fd.pth` (the official repository requires this S3FD file)
 - `PYTHON`: optional full path to the Python executable inside the separate Wav2Lip environment. If unset, the worker's current Python executable is used.
 
+Official upstream downloads (manual; review the non-commercial restriction first):
+- Wav2Lip checkpoint: [official weights folder](https://drive.google.com/drive/folders/153HLrqlBNxzZcHi17PEvP09kkAfzRshM?usp=share_link)
+- S3FD face detector: [s3fd-619a316812.pth](https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth), save it as `face_detection/detection/sfd/s3fd.pth` inside the Wav2Lip repository.
+
 The upstream open-source Wav2Lip repository states that its code and model are for personal/research/non-commercial use only; commercial use is prohibited. Review the [official license/disclaimer](https://github.com/Rudrabha/Wav2Lip#license-and-citation) before use. This integration does not use the paid Sync API. Its published requirements pin older packages including PyTorch 1.1.0, torchvision 0.3.0 and NumPy 1.17.1; keep Wav2Lip in a separate compatible Python environment instead of installing these into the main ASLAM AI worker environment. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
 
 ## Current guided workflow (requested scope: steps 2–5)
