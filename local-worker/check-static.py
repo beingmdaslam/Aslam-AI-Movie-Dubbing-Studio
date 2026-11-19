@@ -40,7 +40,7 @@ required_routes = [
     '@app.get("/system/check")',
     '@app.post("/diarize")',
     '@app.post("/translate")',
-    '@app.post("/subtitles/srt")',
+    '@app.post("/subtitles/srt"',
     '@app.post("/translation/install")',
     '@app.post("/speakers/assign")',
     '@app.post("/subtitles/burn-in")',
