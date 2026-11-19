@@ -191,6 +191,9 @@ if ffmpeg:
         fake_wav2lip.mkdir()
         checkpoint = fake_wav2lip / "checkpoint.pth"
         checkpoint.write_bytes(b"test checkpoint placeholder")
+        detector_weights = fake_wav2lip / "face_detection" / "detection" / "sfd" / "s3fd.pth"
+        detector_weights.parent.mkdir(parents=True)
+        detector_weights.write_bytes(b"fake detector weights")
         (fake_wav2lip / "inference.py").write_text(
             "import argparse, shutil\n"
             "p=argparse.ArgumentParser()\n"
