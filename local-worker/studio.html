@@ -69,7 +69,10 @@ async function analyze(){
  setBusy(analyzeBtn,true,"CHECKING LOCAL WORKER...");
  $("review").style.display="none";$("result").style.display="none";
  try{
-  const health=await checkedFetch("/health");await health.json();
+  const readiness=await (await checkedFetch("/system/check")).json();
+  const required=["ffmpeg","whisper","argosTranslate","speechbrain","torch","torchaudio"];
+  const missing=required.filter(key=>!readiness.checks?.[key]?.available);
+  if(missing.length)throw new Error("Local setup incomplete: "+missing.join(", ")+". Run setup-windows.bat and install FFmpeg, then restart the worker.");
   status("Analyzing video, extracting audio and detecting speakers. This may take a long time on CPU...");
   const form=new FormData();form.append("video",file);
   const detected=await (await checkedFetch("/diarize",{method:"POST",body:form})).json();
@@ -131,6 +134,11 @@ async function render(){
  const missing=needed.filter(id=>!voiceMap.has(id));
  if(missing.length){status("Please add a voice sample for: "+missing.join(", "));return;}
  const target=$("target").value;
+ setBusy(renderBtn,true,"CHECKING VOICE ENGINE...");
+ try{
+  const readiness=await (await checkedFetch("/system/check")).json();
+  if(!readiness.checks?.xttsPackage?.available)throw new Error("XTTS voice engine is not installed. Close the worker and run install-voice-windows.bat.");
+ }catch(e){status("ERROR: "+e.message);setBusy(renderBtn,false);return;}
  setBusy(renderBtn,true,"GENERATING CHARACTER VOICES...");
  try{
   status("Generating dialogue voices and mixing the movie. This can take a long time...");
