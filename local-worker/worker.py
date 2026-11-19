@@ -1109,27 +1109,46 @@ async def extract_audio(video: UploadFile = File(...)):
             await video.close()
 
 
+def resolve_wav2lip_python():
+    """Resolve the optional separate Wav2Lip interpreter, or use this worker's Python."""
+    configured = os.getenv("PYTHON", "").strip()
+    if not configured:
+        return sys.executable
+    candidate = Path(configured).expanduser()
+    if candidate.is_file():
+        return str(candidate.resolve())
+    return shutil.which(configured)
+
+
 @app.get("/lip-sync/status")
 def lip_sync_status():
-    """Report whether a local Wav2Lip checkout and checkpoint are configured."""
+    """Report whether a local Wav2Lip checkout, checkpoint and interpreter are configured."""
     wav2lip_dir = os.getenv("WAV2LIP_DIR", "").strip()
     checkpoint = os.getenv("WAV2LIP_CHECKPOINT", "").strip()
     repo_path = Path(wav2lip_dir).expanduser() if wav2lip_dir else None
     checkpoint_path = Path(checkpoint).expanduser() if checkpoint else None
     inference_exists = bool(repo_path and (repo_path / "inference.py").is_file())
     checkpoint_exists = bool(checkpoint_path and checkpoint_path.is_file())
+    python_path = resolve_wav2lip_python()
+    python_exists = bool(python_path)
+    configured = inference_exists and checkpoint_exists and python_exists
+    if not inference_exists:
+        message = "Wav2Lip needs a local repository containing inference.py."
+    elif not checkpoint_exists:
+        message = "Wav2Lip needs a compatible local checkpoint file."
+    elif not python_exists:
+        message = "The configured Wav2Lip Python executable was not found. Check the PYTHON setting."
+    else:
+        message = "Wav2Lip files and Python interpreter are ready for a local inference attempt."
     return {
         "ok": True,
-        "configured": inference_exists and checkpoint_exists,
+        "configured": configured,
         "repositoryFound": inference_exists,
         "checkpointFound": checkpoint_exists,
-        "message": (
-            "Wav2Lip is ready for a local inference attempt."
-            if inference_exists and checkpoint_exists
-            else "Wav2Lip needs a local repository containing inference.py and a compatible checkpoint. No model is bundled or downloaded automatically."
-        ),
+        "pythonFound": python_exists,
+        "pythonExecutable": python_path,
+        "message": message + " No model is bundled or downloaded automatically.",
     }
-
 
 @app.post("/lip-sync")
 async def lip_sync(
@@ -1144,6 +1163,8 @@ async def lip_sync(
             status_code=503,
             detail="Wav2Lip is not configured. Set WAV2LIP_DIR and WAV2LIP_CHECKPOINT after installing its model.",
         )
+    if not resolve_wav2lip_python():
+        raise HTTPException(status_code=503, detail="The configured Wav2Lip Python executable was not found. Check the PYTHON setting.")
 
     repo_path = Path(wav2lip_dir).expanduser().resolve()
     inference_script = repo_path / "inference.py"
@@ -1195,7 +1216,7 @@ async def lip_sync(
                 raise HTTPException(status_code=400, detail="Dubbed audio is empty.")
 
             command = [
-                os.getenv("PYTHON", sys.executable),
+                resolve_wav2lip_python() or sys.executable,
                 str(inference_script),
                 "--checkpoint_path", str(checkpoint_path),
                 "--face", str(video_path),
