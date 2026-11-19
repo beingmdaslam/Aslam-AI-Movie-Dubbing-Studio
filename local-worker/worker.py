@@ -4,18 +4,10 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-import torch
-import torchaudio
-import torch.nn.functional as F
-from speechbrain.inference.speaker import EncoderClassifier
-
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
-import argostranslate.package
-import argostranslate.translate
 from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
 
 app = FastAPI(title="ASLAM AI Free Local Worker", version="0.1.0")
 
@@ -60,6 +52,10 @@ class SubtitleRequest(BaseModel):
 def get_model():
     global _model
     if _model is None:
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError as exc:
+            raise RuntimeError("Transcription package is missing. Run setup-windows.bat again.") from exc
         _model = WhisperModel(
             MODEL_SIZE,
             device="cpu",
@@ -107,7 +103,9 @@ def system_check():
         "xttsPackage": {"available": importlib.util.find_spec("TTS") is not None},
     }
     return {
-        "ok": all(checks[key]["available"] for key in ("ffmpeg", "whisper", "argosTranslate")),
+        "ok": all(checks[key]["available"] for key in ("ffmpeg", "whisper", "argosTranslate", "speechbrain", "torch", "torchaudio")),
+        "readyForAnalysis": all(checks[key]["available"] for key in ("ffmpeg", "whisper", "argosTranslate", "speechbrain", "torch", "torchaudio")),
+        "readyForVoiceGeneration": checks["xttsPackage"]["available"],
         "checks": checks,
         "notes": [
             "XTTS is optional and has a separate model license.",
@@ -220,6 +218,10 @@ async def transcribe(video: UploadFile = File(...)):
 
 @app.get("/translation/languages")
 def translation_languages():
+    try:
+        import argostranslate.translate
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="Argos Translate is not installed. Run setup-windows.bat.") from exc
     installed = argostranslate.translate.get_installed_languages()
     return {
         "ok": True,
@@ -232,6 +234,10 @@ def translation_languages():
 
 @app.post("/translation/install")
 def install_translation_pair(request: InstallTranslationRequest):
+    try:
+        import argostranslate.package
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="Argos Translate is not installed. Run setup-windows.bat.") from exc
     if request.sourceLanguage == request.targetLanguage:
         raise HTTPException(status_code=400, detail="Choose two different languages.")
 
@@ -280,6 +286,10 @@ def translate_segments(request: TranslationRequest):
             "segments": request.segments,
         }
 
+    try:
+        import argostranslate.translate
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="Argos Translate is not installed. Run setup-windows.bat.") from exc
     installed = argostranslate.translate.get_installed_languages()
     source = next(
         (language for language in installed if language.code == request.sourceLanguage),
@@ -387,6 +397,10 @@ def create_srt(request: SubtitleRequest):
 def get_speaker_model():
     global _speaker_model
     if _speaker_model is None:
+        try:
+            from speechbrain.inference.speaker import EncoderClassifier
+        except ImportError as exc:
+            raise RuntimeError("Speaker detection packages are missing. Run setup-windows.bat.") from exc
         _speaker_model = EncoderClassifier.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
             savedir="pretrained_models/spkrec-ecapa-voxceleb",
@@ -398,6 +412,12 @@ def get_speaker_model():
 @app.post("/diarize")
 async def diarize(video: UploadFile = File(...)):
     """Transcribe a video and group utterance segments by similar voice embeddings."""
+    try:
+        import torch
+        import torchaudio
+        import torch.nn.functional as F
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="Speaker detection packages are missing. Run setup-windows.bat.") from exc
     filename = Path(video.filename or "upload.mp4").name
     suffix = Path(filename).suffix.lower()
     allowed = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
