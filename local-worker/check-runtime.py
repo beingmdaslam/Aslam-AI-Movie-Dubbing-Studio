@@ -205,6 +205,19 @@ if ffmpeg:
         try:
             os.environ["WAV2LIP_DIR"] = str(fake_wav2lip)
             os.environ["WAV2LIP_CHECKPOINT"] = str(checkpoint)
+            os.environ["PYTHON"] = "aslam-missing-python-executable"
+            invalid_python_status = client.get("/lip-sync/status")
+            assert invalid_python_status.status_code == 200
+            assert invalid_python_status.json()["configured"] is False
+            assert invalid_python_status.json()["pythonFound"] is False
+            invalid_python = client.post(
+                "/lip-sync",
+                files={
+                    "video": ("test-movie.mp4", b"not-a-real-video", "video/mp4"),
+                    "dubbed_audio": ("dubbed.wav", lip_audio_buffer.getvalue(), "audio/wav"),
+                },
+            )
+            assert invalid_python.status_code == 503, invalid_python.text
             os.environ["PYTHON"] = sys.executable
             with movie_path.open("rb") as movie:
                 lip_result = client.post(
