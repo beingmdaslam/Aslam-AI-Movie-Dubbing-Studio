@@ -126,6 +126,20 @@ This first version starts each generated line at the supplied timestamp but does
 
 Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
 
+## 8. Burn subtitles into the video
+
+`POST /subtitles/burn-in` accepts a video file, an SRT subtitle file and optional `font_size` (12–48; default 24). FFmpeg renders the subtitles into the picture and returns an MP4. This re-encodes the video and can take substantial CPU time. FFmpeg must include the `subtitles`/libass filter; use a UTF-8 SRT file.
+
+## 9. Optional local lip-sync (Wav2Lip)
+
+`POST /lip-sync` accepts `video` and `dubbed_audio` multipart files and runs a local Wav2Lip checkout. This is optional and is not installed by the base requirements file. Install the Wav2Lip repository and its own Python dependencies separately, obtain a compatible checkpoint from a legitimate source, then set environment variables:
+
+- `WAV2LIP_DIR`: absolute path to the Wav2Lip repository folder containing `inference.py`
+- `WAV2LIP_CHECKPOINT`: absolute path to its checkpoint file
+- `PYTHON`: optional Python executable path (defaults to `python`)
+
+The Wav2Lip model/checkpoint has licensing and usage restrictions; review the exact repository and checkpoint license before use, especially for commercial projects. Lip-sync quality depends on a clear, mostly frontal visible face, suitable frame rate and clean dubbed audio. It may fail on profiles, occlusions, multiple faces or animation. This endpoint is a local integration wrapper, not a bundled or tested model install.
+
 ## Current scope
 
 Implemented:
