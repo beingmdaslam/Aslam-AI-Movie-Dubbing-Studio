@@ -222,6 +222,10 @@ if ffmpeg:
             )
             assert invalid_python.status_code == 503, invalid_python.text
             os.environ["PYTHON"] = sys.executable
+            ready_status = client.get("/lip-sync/status")
+            assert ready_status.status_code == 200
+            assert ready_status.json()["configured"] is True, ready_status.text
+            assert ready_status.json()["faceDetectorFound"] is True
             with movie_path.open("rb") as movie:
                 lip_result = client.post(
                     "/lip-sync",
