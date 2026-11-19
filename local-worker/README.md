@@ -181,7 +181,8 @@ Do not expose this worker directly to the public internet without authentication
 ## Windows helper files
 
 - `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.\n- `install-audio-windows.bat` installs optional Demucs speech/music separation (large download).
+- `install-voice-windows.bat` installs optional XTTS voice generation after asking for confirmation and reminding you to review its license.
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
-The local guided studio at `/studio` is served by this worker. It runs the local analysis → translation → speaker review → voice sample assignment → dubbing → subtitle burn-in flow. The existing hosted Netlify page has not yet been connected to this local workflow; do not deploy this version expecting its existing START button to run local dubbing.
+The local guided studio at `/studio` is served by this worker. It runs the local analysis → translation → speaker review → voice sample assignment → dubbing → subtitle burn-in flow. The existing `index.html` START button opens this local studio in a new tab; because browsers do not transfer a selected file between pages, select the movie again in the local studio. The existing hosted Netlify page has not yet been connected to this local workflow; do not deploy this version expecting its existing START button to run local dubbing.
