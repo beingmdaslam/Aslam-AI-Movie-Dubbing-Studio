@@ -82,6 +82,32 @@ def health():
     }
 
 
+@app.get("/system/check")
+def system_check():
+    """Report local prerequisites without downloading models or changing the machine."""
+    import importlib.util
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    checks = {
+        "ffmpeg": {"available": bool(ffmpeg_path), "path": ffmpeg_path},
+        "whisper": {"available": importlib.util.find_spec("faster_whisper") is not None},
+        "argosTranslate": {"available": importlib.util.find_spec("argostranslate") is not None},
+        "speechbrain": {"available": importlib.util.find_spec("speechbrain") is not None},
+        "torch": {"available": importlib.util.find_spec("torch") is not None},
+        "torchaudio": {"available": importlib.util.find_spec("torchaudio") is not None},
+        "xttsPackage": {"available": importlib.util.find_spec("TTS") is not None},
+    }
+    return {
+        "ok": all(checks[key]["available"] for key in ("ffmpeg", "whisper", "argosTranslate")),
+        "checks": checks,
+        "notes": [
+            "XTTS is optional and has a separate model license.",
+            "Wav2Lip requires a separate repository and checkpoint.",
+            "This check does not download models or prove that full movie processing will succeed.",
+        ],
+    }
+
+
 @app.post("/transcribe")
 async def transcribe(video: UploadFile = File(...)):
     filename = Path(video.filename or "upload.mp4").name
@@ -344,7 +370,7 @@ def create_srt(request: SubtitleRequest):
         ])
 
     return PlainTextResponse(
-        "\\n".join(lines),
+        "\n".join(lines),
         media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="aslam-ai-subtitles.srt"'},
     )
