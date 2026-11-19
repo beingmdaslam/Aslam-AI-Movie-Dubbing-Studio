@@ -118,7 +118,7 @@ Example multipart fields in `/docs`:
 
 Multipart fields:
 - `video`: source video file
-- `segments_json`: JSON array; each item must include `start`, `text`, and `speakerId` (up to 300 lines)
+- `segments_json`: JSON array; each item must include `start`, `text`, and `speakerId` (up to 2000 lines)
 - `speaker_ids_json`: JSON array of unique speaker IDs, in the same order as the voice sample files
 - `voice_samples`: one WAV/MP3/M4A/FLAC/OGG file for each speaker ID (up to 20 MB each)
 - `language`: XTTS language code such as `hi`, `ar`, or `en`
