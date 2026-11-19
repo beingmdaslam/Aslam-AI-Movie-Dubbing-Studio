@@ -109,13 +109,22 @@ async function analyze(){
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy(analyzeBtn,false);}
 }
+function updateSpeakerOptions(){
+ document.querySelectorAll("#lines select").forEach(select=>{
+  const selected=select.value;select.replaceChildren();
+  speakers.forEach(sp=>{const option=document.createElement("option");option.value=sp.speakerId;option.textContent=sp.label||sp.speakerId;select.appendChild(option);});
+  select.value=selected;
+ });
+}
 function renderReview(){
  const speakerIds=[...new Set(translatedSegments.map(s=>s.speakerId||"speaker_unknown"))];
  speakerIds.forEach(id=>{if(!speakers.some(s=>s.speakerId===id))speakers.push({speakerId:id,label:id==="speaker_unknown"?"Unidentified voice":id});});
  const speakerBox=$("speakers");speakerBox.replaceChildren();
  speakers.forEach(sp=>{
   const card=document.createElement("div");card.className="speaker";
-  const heading=document.createElement("h3");heading.textContent=sp.label||sp.speakerId;card.appendChild(heading);
+  const nameLabel=document.createElement("label");nameLabel.textContent="Character name";nameLabel.htmlFor="name-"+sp.speakerId;card.appendChild(nameLabel);
+  const nameInput=document.createElement("input");nameInput.type="text";nameInput.id="name-"+sp.speakerId;nameInput.maxLength=60;nameInput.value=sp.label||sp.speakerId;nameInput.setAttribute("aria-label","Character name for "+sp.speakerId);
+  nameInput.addEventListener("input",()=>{sp.label=nameInput.value.trim()||sp.speakerId;updateSpeakerOptions();});card.appendChild(nameInput);
   const id=document.createElement("p");id.className="muted";id.textContent=sp.speakerId;card.appendChild(id);
   speakerBox.appendChild(card);
  });
