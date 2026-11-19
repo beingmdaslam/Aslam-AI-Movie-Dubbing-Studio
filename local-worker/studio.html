@@ -91,13 +91,10 @@ async function analyze(){
   status("Speaker detection complete. Preparing local translation model...");
   translatedSegments=originalSegments.map(s=>({...s}));
   if(source!==translationTarget){
-   const langs=await (await checkedFetch("/translation/languages")).json();
-   const installed=(langs.installed||[]).some(x=>x.code===source)&& (langs.installed||[]).some(x=>x.code===translationTarget);
-   if(!installed){
-    status("Downloading the free "+source+" → "+translationTarget+" translation model. First setup may take time...");
-    const install=await checkedFetch("/translation/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sourceLanguage:source,targetLanguage:translationTarget})});
-    await install.json();
-   }
+   status("Checking the free "+source+" → "+translationTarget+" translation route...");
+   const install=await checkedFetch("/translation/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sourceLanguage:source,targetLanguage:translationTarget})});
+   const installResult=await install.json();
+   status(installResult.alreadyInstalled?"Using the installed local translation model.":"Free translation model installed. Translating dialogue...");
    status("Translating "+translatedSegments.length+" dialogue segments...");
    const translated=await checkedFetch("/translate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sourceLanguage:source,targetLanguage:translationTarget,segments:translatedSegments})});
    translatedSegments=(await translated.json()).segments;
