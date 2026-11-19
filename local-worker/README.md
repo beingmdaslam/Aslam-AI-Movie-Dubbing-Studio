@@ -83,7 +83,13 @@ Example:
 
 The response keeps segment timestamps and includes the original text in `sourceText`. Human review is recommended before generating voices.
 
-## 4. Export subtitle files
+## 4. Detect and group speakers
+
+Call `POST /diarize` and upload a video. The worker extracts audio, transcribes it and uses the local SpeechBrain ECAPA voice-embedding model to group similar utterances into `speaker_01`, `speaker_02`, etc. It returns transcript timestamps and speaker labels. First use downloads the model. CPU inference can be slow.
+
+Automatic diarization is approximate: short utterances may be marked `speaker_unknown`, and similar-sounding characters may be grouped together. Review and correct speaker labels before assigning cloned/generated voices. It does not identify a real person's identity.
+
+## 5. Export subtitle files
 
 Call `POST /subtitles/srt` with the translated segments. The endpoint returns a downloadable `.srt` file. Set `useSourceText` to `true` to export the original transcript instead of translated text.
 
@@ -96,6 +102,7 @@ Implemented:
 4. Local Argos Translate language-pair installation
 5. Timestamp-preserving transcript translation
 6. SRT subtitle export for original or translated dialogue
+7. Experimental local speaker grouping using SpeechBrain ECAPA embeddings
 
 Still to build:
 - Speaker diarization and manual speaker review
