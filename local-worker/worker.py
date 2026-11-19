@@ -762,3 +762,102 @@ async def dub_audio(
             for upload in voice_samples:
                 await upload.close()
 
+@app.post("/subtitles/burn-in")
+async def burn_in_subtitles(
+    video: UploadFile = File(...),
+    subtitles: UploadFile = File(...),
+    font_size: int = Form(24, ge=12, le=48),
+):
+    """Burn a supplied SRT subtitle track into a video using FFmpeg."""
+    video_name = Path(video.filename or "movie.mp4").name
+    video_suffix = Path(video_name).suffix.lower()
+    if video_suffix not in {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Unsupported video format.")
+    if Path(subtitles.filename or "subtitles.srt").suffix.lower() != ".srt":
+        raise HTTPException(status_code=400, detail="Upload an SRT subtitle file.")
+
+    with tempfile.TemporaryDirectory(prefix="aslam-subtitle-burn-") as temp_dir:
+        root = Path(temp_dir)
+        video_path = root / video_name
+        subtitle_path = root / "captions.srt"
+        output_path = root / "aslam-ai-subtitled.mp4"
+        try:
+            video_size = 0
+            with video_path.open("wb") as output:
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    video_size += len(chunk)
+                    if video_size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Local worker limit is 1 GB.")
+                    output.write(chunk)
+            if video_size == 0:
+                raise HTTPException(status_code=400, detail="Video file is empty.")
+
+            subtitle_size = 0
+            with subtitle_path.open("wb") as output:
+                while True:
+                    chunk = await subtitles.read(128 * 1024)
+                    if not chunk:
+                        break
+                    subtitle_size += len(chunk)
+                    if subtitle_size > 10 * 1024 * 1024:
+                        raise HTTPException(status_code=413, detail="SRT file limit is 10 MB.")
+                    output.write(chunk)
+            if subtitle_size == 0:
+                raise HTTPException(status_code=400, detail="Subtitle file is empty.")
+
+            try:
+                subtitle_text = subtitle_path.read_text(encoding="utf-8-sig")
+            except UnicodeDecodeError:
+                raise HTTPException(status_code=400, detail="SRT must be UTF-8 encoded.")
+            if "-->" not in subtitle_text or not any(line.strip().isdigit() for line in subtitle_text.splitlines()):
+                raise HTTPException(status_code=400, detail="The uploaded SRT does not look valid.")
+
+            ffmpeg = shutil.which("ffmpeg")
+            if not ffmpeg:
+                raise HTTPException(status_code=500, detail="FFmpeg is not installed.")
+
+            escaped_path = str(subtitle_path.resolve()).replace("\\", "/")
+            escaped_path = escaped_path.replace(":", "\\:").replace("'", "\\'")
+            style = (
+                f"FontName=Arial,FontSize={font_size},"
+                "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+                "BorderStyle=1,Outline=2,Shadow=1,MarginV=32"
+            )
+            command = [
+                ffmpeg, "-y", "-i", str(video_path),
+                "-vf", f"subtitles='{escaped_path}':force_style='{style}'",
+                "-map", "0:v:0", "-map", "0:a?",
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+                "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "+faststart", str(output_path),
+            ]
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=6 * 60 * 60
+            )
+            if result.returncode != 0 or not output_path.exists():
+                print("Subtitle burn-in error:", result.stderr[-3000:])
+                raise HTTPException(
+                    status_code=500,
+                    detail="Subtitle rendering failed. Check FFmpeg subtitle/libass support.",
+                )
+            return Response(
+                content=output_path.read_bytes(),
+                media_type="video/mp4",
+                headers={
+                    "Content-Disposition": 'attachment; filename="aslam-ai-subtitled.mp4"'
+                },
+            )
+        except HTTPException:
+            raise
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=408, detail="Subtitle rendering timed out.")
+        except Exception as exc:
+            print("Subtitle burn-in error:", repr(exc))
+            raise HTTPException(status_code=500, detail="Could not render subtitles.")
+        finally:
+            await video.close()
+            await subtitles.close()
+
