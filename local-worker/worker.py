@@ -3,6 +3,10 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+import torch
+import torchaudio
+import torch.nn.functional as F
+from speechbrain.inference.speaker import EncoderClassifier
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
@@ -32,6 +36,7 @@ MODEL_SIZE = os.getenv("WHISPER_MODEL", "small")
 COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 MAX_UPLOAD_BYTES = 1024 * 1024 * 1024  # 1 GB local-worker safety cap
 _model = None
+_speaker_model = None
 
 
 class TranslationRequest(BaseModel):
@@ -339,4 +344,137 @@ def create_srt(request: SubtitleRequest):
         media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="aslam-ai-subtitles.srt"'},
     )
+
+def get_speaker_model():
+    global _speaker_model
+    if _speaker_model is None:
+        _speaker_model = EncoderClassifier.from_hparams(
+            source="speechbrain/spkrec-ecapa-voxceleb",
+            savedir="pretrained_models/spkrec-ecapa-voxceleb",
+            run_opts={"device": "cpu"},
+        )
+    return _speaker_model
+
+
+@app.post("/diarize")
+async def diarize(video: UploadFile = File(...)):
+    """Transcribe a video and group utterance segments by similar voice embeddings."""
+    filename = Path(video.filename or "upload.mp4").name
+    suffix = Path(filename).suffix.lower()
+    allowed = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail="Unsupported video format.")
+
+    with tempfile.TemporaryDirectory(prefix="aslam-diarize-") as temp_dir:
+        source_path = Path(temp_dir) / filename
+        audio_path = Path(temp_dir) / "audio.wav"
+        size = 0
+        try:
+            with source_path.open("wb") as output:
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Local worker limit is 1 GB.")
+                    output.write(chunk)
+            if size == 0:
+                raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+
+            ffmpeg = shutil.which("ffmpeg")
+            if not ffmpeg:
+                raise HTTPException(status_code=500, detail="FFmpeg is not installed.")
+            result = subprocess.run(
+                [ffmpeg, "-y", "-i", str(source_path), "-vn", "-ac", "1",
+                 "-ar", "16000", "-c:a", "pcm_s16le", str(audio_path)],
+                capture_output=True, text=True, timeout=60 * 60,
+            )
+            if result.returncode != 0 or not audio_path.exists():
+                raise HTTPException(status_code=422, detail="Could not extract video audio.")
+
+            whisper = get_model()
+            segments_iter, info = whisper.transcribe(
+                str(audio_path), beam_size=5, vad_filter=True, word_timestamps=True
+            )
+            segments = list(segments_iter)
+            waveform, sample_rate = torchaudio.load(str(audio_path))
+            if waveform.shape[0] > 1:
+                waveform = waveform.mean(dim=0, keepdim=True)
+            if sample_rate != 16000:
+                waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
+
+            encoder = get_speaker_model()
+            known_speakers = []
+            output_segments = []
+            for segment in segments:
+                start = max(0, int(segment.start * 16000))
+                end = min(waveform.shape[1], int(segment.end * 16000))
+                crop = waveform[:, start:end]
+                speaker_id = "speaker_unknown"
+                # Very short utterances do not provide reliable speaker embeddings.
+                if crop.shape[1] >= 16000:
+                    with torch.no_grad():
+                        embedding = encoder.encode_batch(crop).squeeze().detach().cpu()
+                    best_index = -1
+                    best_score = -1.0
+                    for index, known in enumerate(known_speakers):
+                        score = F.cosine_similarity(
+                            embedding.unsqueeze(0), known["embedding"].unsqueeze(0)
+                        ).item()
+                        if score > best_score:
+                            best_score = score
+                            best_index = index
+                    if best_index >= 0 and best_score >= 0.72:
+                        speaker_id = known_speakers[best_index]["id"]
+                        previous = known_speakers[best_index]["embedding"]
+                        known_speakers[best_index]["embedding"] = (
+                            previous * 0.7 + embedding * 0.3
+                        )
+                        known_speakers[best_index]["embedding"] = F.normalize(
+                            known_speakers[best_index]["embedding"], dim=0
+                        )
+                    else:
+                        speaker_id = f"speaker_{len(known_speakers) + 1:02d}"
+                        known_speakers.append({
+                            "id": speaker_id,
+                            "embedding": F.normalize(embedding, dim=0),
+                        })
+
+                output_segments.append({
+                    "start": round(segment.start, 3),
+                    "end": round(segment.end, 3),
+                    "text": segment.text.strip(),
+                    "speakerId": speaker_id,
+                    "words": [
+                        {"start": round(word.start, 3), "end": round(word.end, 3),
+                         "text": word.word}
+                        for word in (segment.words or [])
+                    ],
+                })
+
+            return {
+                "ok": True,
+                "stage": "speaker_diarization_complete",
+                "detectedLanguage": info.language,
+                "speakerCount": len(known_speakers),
+                "speakers": [
+                    {"speakerId": item["id"], "label": f"Character {i + 1}"}
+                    for i, item in enumerate(known_speakers)
+                ],
+                "segments": output_segments,
+                "warning": "Automatic speaker grouping is an estimate. Short lines are marked speaker_unknown; review and correct speaker labels before voice assignment.",
+            }
+        except HTTPException:
+            raise
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=408, detail="Audio extraction timed out.")
+        except Exception as exc:
+            print("Speaker diarization error:", repr(exc))
+            raise HTTPException(
+                status_code=500,
+                detail="Speaker detection failed. Check installed PyTorch, torchaudio and model downloads.",
+            )
+        finally:
+            await video.close()
 
