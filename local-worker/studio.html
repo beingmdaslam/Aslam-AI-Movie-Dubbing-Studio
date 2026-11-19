@@ -64,8 +64,8 @@ footer{text-align:center;color:#888;font-size:12px;padding:12px 0 28px}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const videoInput=$("video"), statusBox=$("status"), analyzeBtn=$("analyze"), renderBtn=$("render");
-let originalSegments=[], speakers=[], translatedSegments=[], finalUrl=null, srtUrl=null;
+const videoInput=$("video"), statusBox=$("status"), analyzeBtn=$("analyze");
+let originalSegments=[], speakers=[], translatedSegments=[], processedVideoBlob=null, srtUrl=null;
 $("background").addEventListener("input",()=>{$("volumeValue").textContent=$("background").value+"%";});
 function status(message){statusBox.textContent=message;}
 function setBusy(button,busy,label){button.disabled=busy;if(busy)button.dataset.old=button.textContent;button.textContent=busy?label:(button.dataset.old||button.textContent);}
@@ -75,7 +75,7 @@ async function analyze(){
  const file=videoInput.files&&videoInput.files[0];if(!file){status("Please select a video first.");return;}
  if(file.size>1024*1024*1024){status("Local worker limit is 1 GB per video.");return;}
  setBusy(analyzeBtn,true,"CHECKING LOCAL WORKER...");
- $("review").style.display="none";$("result").style.display="none";
+ $("review").style.display="none";$("result").style.display="none";processedVideoBlob=null;
  try{
   const readiness=await (await checkedFetch("/system/check")).json();
   const required=["ffmpeg","whisper","argosTranslate","speechbrain","torch","torchaudio"];
@@ -150,9 +150,9 @@ async function burnSubtitles(){
  const file=videoInput.files&&videoInput.files[0];if(!file){status("Select the original video first.");return;}
  setBusy($("burnSubtitles"),true,"BURNING SUBTITLES...");
  try{
-  const srt=await exportSrt();const form=new FormData();form.append("video",file);form.append("subtitles",srt,"translated.srt");
-  const response=await checkedFetch("/subtitles/burn-in",{method:"POST",body:form});const blob=await response.blob();
-  showResult("Translated subtitles have been burned into the video.",blob,"aslam-ai-subtitled.mp4");status("Subtitle video is ready to download.");
+  const srt=await exportSrt();const form=new FormData();form.append("video",processedVideoBlob||file,processedVideoBlob?"aslam-ai-processed.mp4":file.name);form.append("subtitles",srt,"translated.srt");
+  const response=await checkedFetch("/subtitles/burn-in",{method:"POST",body:form});const blob=await response.blob();processedVideoBlob=blob;
+  showResult("Translated subtitles have been burned into the current video output.",blob,"aslam-ai-subtitled.mp4");status("Subtitle video is ready. Further processing will use this version.");
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy($("burnSubtitles"),false);}
 }
@@ -165,14 +165,14 @@ async function runLipSync(){
   const readiness=await (await checkedFetch("/lip-sync/status")).json();
   if(!readiness.configured)throw new Error(readiness.message+" Configure the local model and checkpoint, then restart the worker.");
   status("Running local Wav2Lip. Processing can take a long time on CPU...");
-  const form=new FormData();form.append("video",file);form.append("dubbed_audio",audio);
-  const response=await checkedFetch("/lip-sync",{method:"POST",body:form});const blob=await response.blob();
-  showResult("Wav2Lip processing completed. The output uses the supplied audio; no voice cloning was performed.",blob,"aslam-ai-lipsynced.mp4");status("Lip-synced video is ready to download.");
+  const form=new FormData();form.append("video",processedVideoBlob||file,processedVideoBlob?"aslam-ai-processed.mp4":file.name);form.append("dubbed_audio",audio);
+  const response=await checkedFetch("/lip-sync",{method:"POST",body:form});const blob=await response.blob();processedVideoBlob=blob;
+  showResult("Wav2Lip processing completed. The output uses the supplied audio; no voice cloning was performed.",blob,"aslam-ai-lipsynced.mp4");status("Lip-synced video is ready. Further processing will use this version.");
  }catch(e){status("ERROR: "+e.message);}
  finally{setBusy($("runLipSync"),false);}
 }
 analyzeBtn.addEventListener("click",analyze);$("exportSrt").addEventListener("click",exportSubtitles);$("burnSubtitles").addEventListener("click",burnSubtitles);$("runLipSync").addEventListener("click",runLipSync);
-window.addEventListener("beforeunload",()=>{if(finalUrl)URL.revokeObjectURL(finalUrl);if(srtUrl)URL.revokeObjectURL(srtUrl);if($("download").dataset.url)URL.revokeObjectURL($("download").dataset.url);});
+window.addEventListener("beforeunload",()=>{if(srtUrl)URL.revokeObjectURL(srtUrl);if($("download").dataset.url)URL.revokeObjectURL($("download").dataset.url);});
 </script>
 </body>
 </html>
