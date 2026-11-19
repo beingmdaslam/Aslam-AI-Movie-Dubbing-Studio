@@ -19,6 +19,10 @@ This worker runs on the user's own computer. It uses FFmpeg, faster-whisper and 
 
 ## Install
 
+**Windows quick start:** double-click `setup-windows.bat`. After it finishes, double-click `start-windows.bat`. Keep the black terminal window open while using the worker. The setup script installs the base Python packages but does not install FFmpeg or optional XTTS/Wav2Lip models.
+
+Manual setup:
+
 ```bash
 python -m venv .venv
 ```
@@ -42,6 +46,7 @@ uvicorn worker:app --host 127.0.0.1 --port 8765
 ```
 
 Health check: http://127.0.0.1:8765/health
+Prerequisite check (no model downloads): http://127.0.0.1:8765/system/check
 Interactive API test: http://127.0.0.1:8765/docs
 
 ## 1. Transcription
@@ -163,7 +168,6 @@ Implemented in the repository (not yet locally tested end-to-end):
 
 Remaining product work:
 - Connect the web interface to the local worker and provide a guided end-to-end workflow
-- Add a graphical speaker review and voice assignment interface
 - Add speech/music separation and more reliable dialogue overlap/duration fitting
 - Test dependency compatibility, model downloads, and full movie processing on the target computer
 - Improve job progress, cancellation, storage management and large-file streaming
@@ -171,3 +175,12 @@ Remaining product work:
 Important: the Wav2Lip endpoint is only an integration wrapper. The model repository, Python dependencies and checkpoint must be installed separately. No end-to-end run has been performed yet.
  
 Do not expose this worker directly to the public internet without authentication and upload limits.
+
+
+## Windows helper files
+
+- `setup-windows.bat` creates a Python 3.11 virtual environment and installs the base local worker requirements.
+- `start-windows.bat` starts the API on `127.0.0.1:8765`.
+- `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
+
+The worker is still an API backend. The hosted web page has not yet been connected to it. Do not deploy this version expecting the START button to run local dubbing.
