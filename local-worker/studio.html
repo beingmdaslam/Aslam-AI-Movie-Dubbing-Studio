@@ -38,18 +38,26 @@ footer{text-align:center;color:#888;font-size:12px;padding:12px 0 28px}
 </section>
 
 <section class="panel" id="review">
-<h2>2. Review dialogue and assign character voices</h2>
-<p class="muted">Check each translated line and correct the detected speaker where needed. Upload a clean voice sample that you own or have permission to use for every character.</p>
+<h2>2. Review speakers and translated dialogue</h2>
+<p class="muted">Voice cloning is intentionally excluded. Review the detected character groups, correct speaker labels and edit translated dialogue before exporting subtitles.</p>
 <div id="speakers"></div>
 <h3 style="margin-top:18px">Dialogue review</h3>
 <div id="lines"></div>
-<button id="render" class="full">GENERATE DUBBED MOVIE</button>
+<div class="grid" style="margin-top:14px">
+<button id="exportSrt">EXPORT SUBTITLES (SRT)</button>
+<button id="burnSubtitles">BURN SUBTITLES INTO VIDEO</button>
+</div>
+<label for="dubbedAudio">Existing dubbed audio for Wav2Lip (WAV, MP3, M4A or FLAC)</label>
+<input id="dubbedAudio" type="file" accept=".wav,.mp3,.m4a,.flac,audio/*">
+<p class="muted">Upload audio already dubbed by a permitted tool or recorded by you. Wav2Lip only synchronizes mouth movement; it does not create or clone voices.</p>
+<button id="runLipSync" class="full">RUN WAV2LIP LIP-SYNC</button>
 </section>
 
 <section class="panel" id="result">
-<h2>3. Your dubbed movie</h2>
+<h2>3. Exported files</h2>
 <p id="resultNote" class="muted"></p>
-<a id="download" class="download" download="aslam-ai-dubbed.mp4">DOWNLOAD FINAL MP4</a> <a id="srtDownload" class="download" download="aslam-ai-subtitles.srt">DOWNLOAD SRT</a>
+<a id="download" class="download" download="aslam-ai-lipsynced.mp4" style="display:none">DOWNLOAD PROCESSED MP4</a>
+<a id="srtDownload" class="download" download="aslam-ai-subtitles.srt" style="display:none">DOWNLOAD SRT</a>
 </section>
 <footer>ASLAM AI • Runs on your own computer. Keep this worker window open during processing.</footer>
 </main>
@@ -106,12 +114,10 @@ function renderReview(){
  const speakerIds=[...new Set(translatedSegments.map(s=>s.speakerId||"speaker_unknown"))];
  speakerIds.forEach(id=>{if(!speakers.some(s=>s.speakerId===id))speakers.push({speakerId:id,label:id==="speaker_unknown"?"Unidentified voice":id});});
  const speakerBox=$("speakers");speakerBox.replaceChildren();
- speakers.forEach((sp,index)=>{
+ speakers.forEach(sp=>{
   const card=document.createElement("div");card.className="speaker";
   const heading=document.createElement("h3");heading.textContent=sp.label||sp.speakerId;card.appendChild(heading);
   const id=document.createElement("p");id.className="muted";id.textContent=sp.speakerId;card.appendChild(id);
-  const label=document.createElement("label");label.textContent="Voice sample for this character";card.appendChild(label);
-  const input=document.createElement("input");input.type="file";input.accept=".wav,.mp3,.m4a,.flac,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg";input.dataset.speaker=sp.speakerId;input.id="voice_"+index;card.appendChild(input);
   speakerBox.appendChild(card);
  });
  const lines=$("lines");lines.replaceChildren();
@@ -125,64 +131,48 @@ function renderReview(){
   lines.appendChild(card);
  });
 }
-async function render(){
- const file=videoInput.files&&videoInput.files[0];if(!file)return;
- const voiceInputs=[...document.querySelectorAll("#speakers input[type=file]")];
- const selected=voiceInputs.filter(input=>input.files&&input.files[0]);
- const voiceMap=new Map(selected.map(input=>[input.dataset.speaker,input.files[0]]));
- const needed=[...new Set(translatedSegments.map(s=>s.speakerId))];
- const missing=needed.filter(id=>!voiceMap.has(id));
- if(missing.length){status("Please add a voice sample for: "+missing.join(", "));return;}
- const target=$("target").value;
- setBusy(renderBtn,true,"CHECKING VOICE ENGINE...");
- try{
-  const readiness=await (await checkedFetch("/system/check")).json();
-  if(!readiness.checks?.xttsPackage?.available)throw new Error("XTTS voice engine is not installed. Close the worker and run install-voice-windows.bat.");
-  if($("lipSync").checked){
-   const lipReady=await (await checkedFetch("/lip-sync/status")).json();
-   if(!lipReady.configured)throw new Error(lipReady.message+" After obtaining the compatible model files, run configure-wav2lip-windows.bat and restart the worker. Dubbing was not started.");
-  }
- }catch(e){status("ERROR: "+e.message);setBusy(renderBtn,false);return;}
- setBusy(renderBtn,true,"GENERATING CHARACTER VOICES...");
- try{
-  status("Generating dialogue voices and mixing the movie. This can take a long time...");
-  const data=new FormData();data.append("video",file);data.append("segments_json",JSON.stringify(translatedSegments));data.append("speaker_ids_json",JSON.stringify([...voiceMap.keys()]));
-  for(const voice of voiceMap.values())data.append("voice_samples",voice);
-  data.append("language",target);data.append("background_volume",String(Number($("background").value)/100));
-  const response=await checkedFetch("/dub-audio",{method:"POST",body:data});
-  let dubbedBlob=await response.blob();
-  const separation=response.headers.get("X-ASLAM-Background-Separation")||"reduced-original-audio";
-  status("Dubbed audio ready. Burning translated subtitles into the video...");
-  const srt=translatedSegments.map((s,i)=>{const stamp=n=>{let ms=Math.max(0,Math.round(Number(n)*1000));let h=Math.floor(ms/3600000);ms%=3600000;let m=Math.floor(ms/60000);ms%=60000;let sec=Math.floor(ms/1000);let milli=ms%1000;return [h,m,sec].map(x=>String(x).padStart(2,"0")).join(":")+","+String(milli).padStart(3,"0");};return (i+1)+"\n"+stamp(s.start)+" --> "+stamp(s.end)+"\n"+s.text+"\n";}).join("\n");
-  if(srtUrl)URL.revokeObjectURL(srtUrl);srtUrl=URL.createObjectURL(new Blob([srt],{type:"text/plain;charset=utf-8"}));$("srtDownload").href=srtUrl;
-  let lipSyncStatus="not requested";
-  if($("lipSync").checked){
-   status("Preparing dubbed audio for optional Wav2Lip lip-sync...");
-   try{
-    const extractForm=new FormData();extractForm.append("video",dubbedBlob,"dubbed.mp4");
-    const audioResponse=await checkedFetch("/audio/extract",{method:"POST",body:extractForm});
-    const audioBlob=await audioResponse.blob();
-    const lipForm=new FormData();lipForm.append("video",dubbedBlob,"dubbed.mp4");lipForm.append("dubbed_audio",audioBlob,"dubbed.wav");
-    const lipResponse=await checkedFetch("/lip-sync",{method:"POST",body:lipForm});
-    dubbedBlob=await lipResponse.blob();lipSyncStatus="completed";
-   }catch(e){lipSyncStatus="skipped: "+e.message;}
-  }
-  let finalBlob=dubbedBlob;let captions="not applied";
-  try{
-   const cap=new FormData();cap.append("video",dubbedBlob,"dubbed.mp4");cap.append("subtitles",new Blob([srt],{type:"text/plain;charset=utf-8"}),"translated.srt");
-   const burned=await checkedFetch("/subtitles/burn-in",{method:"POST",body:cap});
-   finalBlob=await burned.blob();captions="burned into video";
-  }catch(e){captions="not burned in ("+e.message+"); download the SRT separately";}
-  if(finalUrl)URL.revokeObjectURL(finalUrl);finalUrl=URL.createObjectURL(finalBlob);
-  $("download").href=finalUrl;$("result").style.display="block";
-  $("resultNote").textContent="Background audio: "+separation+". Subtitles: "+captions+". Original video quality is re-encoded only when subtitles are burned in.";
-  status("Finished. Your dubbed MP4 is ready to download.");
-  $("result").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(e){status("ERROR: "+e.message);}
- finally{setBusy(renderBtn,false);}
+async function exportSrt(){
+ if(!translatedSegments.length){status("Analyze a video first.");return null;}
+ const response=await checkedFetch("/subtitles/srt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({segments:translatedSegments,useSourceText:false})});
+ return await response.blob();
 }
-analyzeBtn.addEventListener("click",analyze);renderBtn.addEventListener("click",render);
-window.addEventListener("beforeunload",()=>{if(finalUrl)URL.revokeObjectURL(finalUrl);if(srtUrl)URL.revokeObjectURL(srtUrl);});
+function showResult(note,blob,filename){
+ if(blob){const url=URL.createObjectURL(blob);const link=$("download");if(link.dataset.url)URL.revokeObjectURL(link.dataset.url);link.dataset.url=url;link.href=url;link.download=filename;link.style.display="inline-block";}
+ $("resultNote").textContent=note;$("result").style.display="block";$("result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function exportSubtitles(){
+ setBusy($("exportSrt"),true,"EXPORTING SRT...");
+ try{const blob=await exportSrt();if(srtUrl)URL.revokeObjectURL(srtUrl);srtUrl=URL.createObjectURL(blob);$("srtDownload").href=srtUrl;$("srtDownload").style.display="inline-block";showResult("Translated subtitle file is ready.",null);status("SRT subtitle file exported.");}
+ catch(e){status("ERROR: "+e.message);}
+ finally{setBusy($("exportSrt"),false);}
+}
+async function burnSubtitles(){
+ const file=videoInput.files&&videoInput.files[0];if(!file){status("Select the original video first.");return;}
+ setBusy($("burnSubtitles"),true,"BURNING SUBTITLES...");
+ try{
+  const srt=await exportSrt();const form=new FormData();form.append("video",file);form.append("subtitles",srt,"translated.srt");
+  const response=await checkedFetch("/subtitles/burn-in",{method:"POST",body:form});const blob=await response.blob();
+  showResult("Translated subtitles have been burned into the video.",blob,"aslam-ai-subtitled.mp4");status("Subtitle video is ready to download.");
+ }catch(e){status("ERROR: "+e.message);}
+ finally{setBusy($("burnSubtitles"),false);}
+}
+async function runLipSync(){
+ const file=videoInput.files&&videoInput.files[0];const audio=$("dubbedAudio").files&&$("dubbedAudio").files[0];
+ if(!file){status("Select the original face video first.");return;}
+ if(!audio){status("Select an existing dubbed audio file first.");return;}
+ setBusy($("runLipSync"),true,"CHECKING WAV2LIP...");
+ try{
+  const readiness=await (await checkedFetch("/lip-sync/status")).json();
+  if(!readiness.configured)throw new Error(readiness.message+" Configure the local model and checkpoint, then restart the worker.");
+  status("Running local Wav2Lip. Processing can take a long time on CPU...");
+  const form=new FormData();form.append("video",file);form.append("dubbed_audio",audio);
+  const response=await checkedFetch("/lip-sync",{method:"POST",body:form});const blob=await response.blob();
+  showResult("Wav2Lip processing completed. The output uses the supplied audio; no voice cloning was performed.",blob,"aslam-ai-lipsynced.mp4");status("Lip-synced video is ready to download.");
+ }catch(e){status("ERROR: "+e.message);}
+ finally{setBusy($("runLipSync"),false);}
+}
+analyzeBtn.addEventListener("click",analyze);$("exportSrt").addEventListener("click",exportSubtitles);$("burnSubtitles").addEventListener("click",burnSubtitles);$("runLipSync").addEventListener("click",runLipSync);
+window.addEventListener("beforeunload",()=>{if(finalUrl)URL.revokeObjectURL(finalUrl);if(srtUrl)URL.revokeObjectURL(srtUrl);if($("download").dataset.url)URL.revokeObjectURL($("download").dataset.url);});
 </script>
 </body>
 </html>
