@@ -645,8 +645,8 @@ async def dub_audio(
     except (TypeError, json.JSONDecodeError):
         raise HTTPException(status_code=400, detail="Segments or speaker IDs contain invalid JSON.")
 
-    if not isinstance(segments, list) or not segments or len(segments) > 300:
-        raise HTTPException(status_code=400, detail="Provide between 1 and 300 dialogue segments.")
+    if not isinstance(segments, list) or not segments or len(segments) > 2000:
+        raise HTTPException(status_code=400, detail="Provide between 1 and 2000 dialogue segments.")
     if not isinstance(speaker_ids, list) or len(speaker_ids) != len(voice_samples):
         raise HTTPException(status_code=400, detail="Each voice sample must have one matching speaker ID.")
     if len(set(speaker_ids)) != len(speaker_ids) or not all(
@@ -666,10 +666,14 @@ async def dub_audio(
             raise HTTPException(status_code=400, detail=f"Segment {index + 1} has invalid start time.")
         if not isinstance(text_value, str) or not text_value.strip() or len(text_value) > 1500:
             raise HTTPException(status_code=400, detail=f"Segment {index + 1} has invalid dialogue text.")
-        if start < 0 or not isinstance(speaker_id, str) or speaker_id not in voice_map:
+        try:
+            end = float(segment.get("end"))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"Segment {index + 1} has invalid end time.")
+        if start < 0 or end <= start or not isinstance(speaker_id, str) or speaker_id not in voice_map:
             raise HTTPException(
                 status_code=400,
-                detail=f"Segment {index + 1} needs a valid start time and an assigned speaker voice.",
+                detail=f"Segment {index + 1} needs valid timestamps and an assigned speaker voice.",
             )
 
     filename = Path(video.filename or "movie.mp4").name
@@ -773,19 +777,55 @@ async def dub_audio(
                     raise RuntimeError(f"Voice generation failed for dialogue {index + 1}.")
                 generated_paths.append((generated_path, float(segment["start"])))
 
-            # Input 0 is the video; input 1 is its extracted original soundtrack.
+            # Mix dialogue clips in batches to avoid a huge FFmpeg command for full-length movies.
+            dialogue_mix_paths = []
+            batch_size = 40
+            for batch_number, offset in enumerate(range(0, len(generated_paths), batch_size)):
+                batch = generated_paths[offset:offset + batch_size]
+                batch_path = root / f"dialogue_mix_{batch_number:03d}.wav"
+                batch_command = [ffmpeg, "-y"]
+                for generated_path, _ in batch:
+                    batch_command.extend(["-i", str(generated_path)])
+
+                batch_filters = []
+                batch_labels = []
+                for index, (_, start_time) in enumerate(batch):
+                    delay_ms = int(round(start_time * 1000))
+                    batch_filters.append(
+                        f"[{index}:a]adelay={delay_ms}|{delay_ms}[line{index}]"
+                    )
+                    batch_labels.append(f"[line{index}]")
+                batch_filters.append(
+                    "".join(batch_labels)
+                    + f"amix=inputs={len(batch_labels)}:duration=longest:dropout_transition=0,"
+                      "alimiter=limit=0.95[mix]"
+                )
+                batch_command.extend([
+                    "-filter_complex", ";".join(batch_filters),
+                    "-map", "[mix]", "-ac", "2", "-ar", "24000",
+                    "-c:a", "pcm_s16le", str(batch_path),
+                ])
+                batch_result = subprocess.run(
+                    batch_command, capture_output=True, text=True, timeout=2 * 60 * 60
+                )
+                if batch_result.returncode != 0 or not batch_path.exists():
+                    print("FFmpeg dialogue batch mix error:", batch_result.stderr[-2500:])
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Could not mix generated dialogue batch {batch_number + 1}.",
+                    )
+                dialogue_mix_paths.append(batch_path)
+
+            # Input 0 is the video; input 1 is the background soundtrack.
             command = [ffmpeg, "-y", "-i", str(source_path), "-i", str(background_mix_path)]
-            for generated_path, _ in generated_paths:
-                command.extend(["-i", str(generated_path)])
+            for mix_path in dialogue_mix_paths:
+                command.extend(["-i", str(mix_path)])
 
             filters = [f"[1:a]volume={background_volume:.3f}[bg]"]
             mix_inputs = ["[bg]"]
-            for index, (_, start_time) in enumerate(generated_paths):
-                delay_ms = int(round(start_time * 1000))
-                filters.append(
-                    f"[{index + 2}:a]adelay={delay_ms}|{delay_ms},volume=1.0[d{index}]"
-                )
-                mix_inputs.append(f"[d{index}]")
+            for index in range(len(dialogue_mix_paths)):
+                filters.append(f"[{index + 2}:a]volume=1.0[dub{index}]")
+                mix_inputs.append(f"[dub{index}]")
             filters.append(
                 "".join(mix_inputs)
                 + f"amix=inputs={len(mix_inputs)}:duration=first:dropout_transition=0,"
