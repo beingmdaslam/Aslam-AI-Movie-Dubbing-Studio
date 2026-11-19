@@ -168,11 +168,11 @@ if ffmpeg:
         checkpoint = fake_wav2lip / "checkpoint.pth"
         checkpoint.write_bytes(b"test checkpoint placeholder")
         (fake_wav2lip / "inference.py").write_text(
-            "import argparse, shutil\\n"
-            "p=argparse.ArgumentParser()\\n"
+            "import argparse, shutil\n"
+            "p=argparse.ArgumentParser()\n"
             "p.add_argument('--checkpoint_path'); p.add_argument('--face'); "
-            "p.add_argument('--audio'); p.add_argument('--outfile')\\n"
-            "a=p.parse_args(); shutil.copyfile(a.face, a.outfile)\\n",
+            "p.add_argument('--audio'); p.add_argument('--outfile')\n"
+            "a=p.parse_args(); shutil.copyfile(a.face, a.outfile)\n",
             encoding="utf-8",
         )
         old_dir = os.environ.get("WAV2LIP_DIR")
