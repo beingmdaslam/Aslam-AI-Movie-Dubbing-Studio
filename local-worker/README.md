@@ -45,6 +45,7 @@ pip install -r requirements-voice.txt
 uvicorn worker:app --host 127.0.0.1 --port 8765
 ```
 
+Local studio UI: http://127.0.0.1:8765/studio
 Health check: http://127.0.0.1:8765/health
 Prerequisite check (no model downloads): http://127.0.0.1:8765/system/check
 Interactive API test: http://127.0.0.1:8765/docs
@@ -183,4 +184,4 @@ Do not expose this worker directly to the public internet without authentication
 - `start-windows.bat` starts the API on `127.0.0.1:8765`.
 - `/system/check` reports whether FFmpeg and the required Python packages are available. It does not download model weights or certify end-to-end operation.
 
-The worker is still an API backend. The hosted web page has not yet been connected to it. Do not deploy this version expecting the START button to run local dubbing.
+The local guided studio at `/studio` is served by this worker. It runs the local analysis → translation → speaker review → voice sample assignment → dubbing → subtitle burn-in flow. The existing hosted Netlify page has not yet been connected to this local workflow; do not deploy this version expecting its existing START button to run local dubbing.
