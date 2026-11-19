@@ -72,8 +72,11 @@ def health():
     return {
         "ok": True,
         "service": "ASLAM AI Free Local Worker",
-        "stage": "transcription_and_translation",
+        "stage": "local_transcription_translation_speaker_voice_and_audio_mix",
         "translationEngine": "Argos Translate (local open-source)",
+        "speakerEngine": "SpeechBrain ECAPA (local)",
+        "voiceEngine": "Coqui XTTS-v2 (lazy-loaded local model)",
+        "renderEngine": "FFmpeg",
         "model": MODEL_SIZE,
         "device": "cpu",
     }
