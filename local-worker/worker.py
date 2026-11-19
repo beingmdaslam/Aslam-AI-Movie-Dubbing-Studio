@@ -8,8 +8,8 @@ import torchaudio
 import torch.nn.functional as F
 from speechbrain.inference.speaker import EncoderClassifier
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel, Field
 import argostranslate.package
 import argostranslate.translate
@@ -37,6 +37,7 @@ COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 MAX_UPLOAD_BYTES = 1024 * 1024 * 1024  # 1 GB local-worker safety cap
 _model = None
 _speaker_model = None
+_tts_model = None
 
 
 class TranslationRequest(BaseModel):
@@ -477,4 +478,110 @@ async def diarize(video: UploadFile = File(...)):
             )
         finally:
             await video.close()
+
+# XTTS-v2 is loaded only when the user requests voice generation.
+XTTS_MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
+SUPPORTED_XTTS_LANGUAGES = {
+    "ar", "zh-cn", "cs", "nl", "en", "fr", "de", "hi",
+    "hu", "it", "ja", "ko", "pl", "pt", "ru", "es", "tr",
+}
+
+
+def get_tts_model():
+    global _tts_model
+    if _tts_model is None:
+        try:
+            from TTS.api import TTS
+        except ImportError as exc:
+            raise RuntimeError(
+                "Voice generation dependencies are missing. Install the optional XTTS package."
+            ) from exc
+        _tts_model = TTS(
+            model_name=XTTS_MODEL_NAME,
+            progress_bar=False,
+            gpu=False,
+        )
+    return _tts_model
+
+
+@app.get("/tts/languages")
+def tts_languages():
+    return {
+        "ok": True,
+        "engine": "Coqui XTTS-v2 (local)",
+        "languages": sorted(SUPPORTED_XTTS_LANGUAGES),
+        "note": "Language support and pronunciation quality vary. First use downloads model files.",
+    }
+
+
+@app.post("/tts/clone")
+async def clone_voice(
+    text: str = Form(..., min_length=1, max_length=1500),
+    language: str = Form(..., min_length=2, max_length=5),
+    reference_audio: UploadFile = File(...),
+):
+    """Generate one line in a voice matching an audio sample supplied by the user."""
+    language = language.lower().strip()
+    if language not in SUPPORTED_XTTS_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail="This language is not supported by the configured XTTS-v2 model.",
+        )
+
+    reference_suffix = Path(reference_audio.filename or "voice.wav").suffix.lower()
+    if reference_suffix not in {".wav", ".mp3", ".m4a", ".flac", ".ogg"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Voice sample must be WAV, MP3, M4A, FLAC or OGG.",
+        )
+
+    with tempfile.TemporaryDirectory(prefix="aslam-voice-") as temp_dir:
+        reference_path = Path(temp_dir) / f"reference{reference_suffix}"
+        output_path = Path(temp_dir) / "generated.wav"
+        size = 0
+        try:
+            with reference_path.open("wb") as output:
+                while True:
+                    chunk = await reference_audio.read(256 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > 20 * 1024 * 1024:
+                        raise HTTPException(
+                            status_code=413,
+                            detail="Voice sample limit is 20 MB.",
+                        )
+                    output.write(chunk)
+
+            if size == 0:
+                raise HTTPException(status_code=400, detail="Voice sample is empty.")
+
+            engine = get_tts_model()
+            engine.tts_to_file(
+                text=text.strip(),
+                speaker_wav=str(reference_path),
+                language=language,
+                file_path=str(output_path),
+            )
+            if not output_path.exists() or output_path.stat().st_size == 0:
+                raise RuntimeError("The voice model did not produce an audio file.")
+
+            audio_bytes = output_path.read_bytes()
+            return Response(
+                content=audio_bytes,
+                media_type="audio/wav",
+                headers={
+                    "Content-Disposition": 'attachment; filename="aslam-ai-voice.wav"'
+                },
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            print("Local voice generation error:", repr(exc))
+            raise HTTPException(
+                status_code=500,
+                detail="Voice generation failed. Check XTTS model download, language code and worker logs.",
+            )
+        finally:
+            await reference_audio.close()
 
