@@ -36,8 +36,8 @@ try{
  await dashboard.locator("#startButton").click();
  await dashboard.waitForURL("**/mobile-studio.html",{timeout:15000});
  await dashboard.waitForFunction(()=>document.querySelector("#status").textContent.includes("Video received from dashboard"),null,{timeout:15000});
- const handoffState=await dashboard.evaluate(()=>({source:document.querySelector("#sourceLanguage").value,target:document.querySelector("#targetLanguage").value,quality:document.querySelector("#outputQuality").value,video:!!document.querySelector("#preview").src}));
- if(handoffState.source!=="en"||handoffState.target!=="ar"||handoffState.quality!=="720"||!handoffState.video)throw new Error("Dashboard-to-mobile handoff did not preserve the video and settings: "+JSON.stringify(handoffState));
+ const handoffState=await dashboard.evaluate(()=>({source:document.querySelector("#sourceLanguage").value,target:document.querySelector("#targetLanguage").value,quality:document.querySelector("#outputQuality").value,video:!!document.querySelector("#preview").src,originalName:window.aslamOriginalVideoName}));
+ if(handoffState.source!=="en"||handoffState.target!=="ar"||handoffState.quality!=="720"||!handoffState.video||handoffState.originalName!=="handoff-test.webm")throw new Error("Dashboard-to-mobile handoff did not preserve the video and settings: "+JSON.stringify(handoffState));
  await dashboard.close();
  await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
  await page.waitForFunction(()=>document.querySelector("#videoFile").files.length===1,null,{timeout:10000});
