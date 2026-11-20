@@ -2,6 +2,14 @@
 
 A free, local-first movie analysis and subtitle workflow. The website is the launcher; video processing runs on your own Windows computer so it does not require a paid cloud AI API.
 
+## Phone-only, zero-cost mode
+
+Open the hosted dashboard on your phone and choose **START AI DUBBING** to open `mobile-studio.html`. This browser-only mode can preview a locally selected video, import an existing SRT subtitle file, edit subtitle text and timestamps, preview subtitles synchronized over the video, sort entries, and export an SRT file. The video is not uploaded to a server.
+
+This mode does not yet perform automatic speech recognition, automatic translation, generated speech, voice cloning, lip-sync, or final video rendering. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
+
+The `local-worker/` folder remains available as an optional computer-based workflow. It is not required for the phone-only subtitle editor.
+
 ## Current workflow
 
 1. Select a movie in the local studio.
