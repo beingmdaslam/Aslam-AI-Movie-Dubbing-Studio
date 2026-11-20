@@ -101,6 +101,9 @@ for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", 
 for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="ttsEngine"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
+translation_source = (ROOT.parent / "translation.js").read_text(encoding="utf-8")
+if "detected.split(\"-\")[0].toLowerCase()" not in translation_source or "tags[base]" not in translation_source:
+    raise SystemExit("Translation language detection must normalize regional language codes.")
 asr_source = (ROOT.parent / "asr.js").read_text(encoding="utf-8")
 if "rms<0.001" not in asr_source or "Math.min(span,rawStart)" not in asr_source or "Math.min(span,rawEnd)" not in asr_source:
     raise SystemExit("ASR must skip silent audio segments and clamp Whisper timestamps to each segment.")
