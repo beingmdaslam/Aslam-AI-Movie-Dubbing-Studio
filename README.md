@@ -6,7 +6,7 @@ A zero-cost project with a phone-only browser subtitle editor and an optional lo
 
 Open the hosted dashboard on your phone and choose **START AI DUBBING** to open `mobile-studio.html`. This browser-only mode can preview a locally selected video, import an existing SRT subtitle file, edit subtitle text and timestamps, preview subtitles synchronized over the video, sort entries, export an SRT file, and save/restore a complete subtitle project as JSON. When you choose a video on the dashboard and continue, the file is handed to the mobile editor using on-device IndexedDB when the browser permits it; the video is not uploaded to a server. If the browser storage quota is insufficient, select the video again inside the editor.
 
-The mobile editor includes experimental on-device Whisper Tiny speech-to-text, local MMS text-to-speech, and browser-based FFmpeg MP4 muxing. First use downloads free model/runtime files; speech recognition, voice generation, and muxing run in the browser and do not upload the video. Performance and practical video length depend on phone memory, browser support, and model download/cache availability. Review generated text, timestamps, synchronization, and audio quality. MMS models are licensed CC-BY-NC 4.0 (non-commercial only); do not use these model weights commercially without separate permission. Dialogue lines support manual speaker labels for cast tracking, but automatic diarization, separate speaker voice assignment/identity matching, voice cloning, and lip-sync are not implemented. This is an experimental local workflow, not a guarantee of full-length movie processing on every phone.
+The mobile editor includes experimental on-device Whisper Tiny speech-to-text, local MMS or optional Supertonic 3 text-to-speech, and browser-based FFmpeg MP4 muxing. First use downloads free model/runtime files; speech recognition, voice generation, and muxing run in the browser and do not upload the video. Performance and practical video length depend on phone memory, browser support, and model download/cache availability. Review generated text, timestamps, synchronization, and audio quality. MMS models are licensed CC-BY-NC 4.0 (non-commercial only); do not use these model weights commercially without separate permission. Dialogue lines support manual speaker labels and per-character preset voice assignment through Supertonic 3 (10 preset voices). Automatic speaker diarization, personal voice cloning, and lip-sync are not implemented. This is an experimental local workflow, not a guarantee of full-length movie processing on every phone.
 
 The `local-worker/` folder remains available as an optional computer-based workflow. It is not required for the phone-only subtitle editor.
 
@@ -68,11 +68,11 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 
 
 ### Local text-to-speech (TTS)
-- The mobile editor can generate a WAV audio track from translated dialogue and place each generated utterance at its subtitle start timestamp.
+- The mobile editor can generate a WAV audio track from translated dialogue and place each generated utterance at its subtitle start timestamp. Select MMS for a single voice per language, or optionally load Supertonic 3 for ten preset male/female voices and consistent per-character voice assignments across 31 supported languages. Supertonic 3 downloads about 400 MB on first use and runs locally with ONNX Runtime Web (WebGPU where available, otherwise WASM).
 - Available browser model packs: Hindi, Arabic, English, French, Spanish, German, Portuguese and Russian.
 - Models run in the browser using Transformers.js; first use downloads model weights and requires free storage, memory and a supported browser.
-- The underlying Meta MMS-TTS models are licensed CC-BY-NC 4.0. This is **not a commercial-use license**. Obtain suitable permission or replace the model before any commercial use.
-- This creates a separate dubbed WAV track. The editor can mux it into MP4 locally; voice cloning and distinct speaker voices are still outstanding.
+- The underlying Meta MMS-TTS models are licensed CC-BY-NC 4.0. This is **not a commercial-use license**. Obtain suitable permission or replace the model before any commercial use. Supertonic 3 weights use the OpenRAIL-M license; review its restrictions before redistribution or commercial use.
+- This creates a separate dubbed WAV track. The editor can mux it into MP4 locally. Supertonic's preset voices are not voice cloning and do not imitate a real person.
 
 
 ### Final MP4 muxing
