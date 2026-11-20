@@ -15,7 +15,7 @@ py_compile.compile(str(WORKER), doraise=True)
 class StudioParser(HTMLParser):
     pass
 
-html_files = [STUDIO, ROOT.parent / "index.html"]
+html_files = [STUDIO, ROOT.parent / "index.html", ROOT.parent / "mobile-studio.html"]
 for html_path in html_files:
     html = html_path.read_text(encoding="utf-8")
     StudioParser().feed(html)
@@ -60,12 +60,12 @@ if r'"\\n".join(lines)' in source:
 index_source = (ROOT.parent / "index.html").read_text(encoding="utf-8")
 if '/.netlify/functions/create-upload' in index_source:
     raise SystemExit("Main START button must not upload videos to paid/cloud storage.")
-if 'http://127.0.0.1:8765/studio' not in index_source:
-    raise SystemExit("Main START button is not connected to the local studio.")
+if 'mobile-studio.html' not in index_source:
+    raise SystemExit("Main START button must open the phone-only mobile studio.")
 if "Voice Matching" in index_source or "Character Voices / Clone" in index_source:
     raise SystemExit("The main page must not advertise voice cloning in the current steps 2-5 workflow.")
-if "OPEN LOCAL STUDIO" not in index_source:
-    raise SystemExit("The main page must clearly open the local studio rather than promise automatic voice dubbing.")
+if 'window.location.href = "mobile-studio.html"' not in index_source:
+    raise SystemExit("The main START action must hand off to the phone-only mobile studio.")
 studio_source = STUDIO.read_text(encoding="utf-8")
 if 'Voice cloning is intentionally excluded' not in studio_source:
     raise SystemExit("The current studio must clearly exclude voice cloning.")
@@ -89,5 +89,16 @@ if "WAV2LIP_PYTHON" not in wav_helper or "setx WAV2LIP_PYTHON" not in wav_helper
     raise SystemExit("Wav2Lip setup helper must support a separate Python environment.")
 if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
     raise SystemExit("Wav2Lip configuration must verify its separate runtime dependencies.")
+
+
+mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
+for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="exportSrt"', 'id="saveProject"', 'class="speaker"'):
+    if required_ui not in mobile_source:
+        raise SystemExit("Missing mobile workflow control: " + required_ui)
+for module_name in ("asr.js", "translation.js", "tts.js", "render.js"):
+    module_path = ROOT.parent / module_name
+    if not module_path.exists():
+        raise SystemExit("Missing mobile processing module: " + module_name)
+    subprocess.run([shutil.which("node") or "node", "--check", str(module_path)], check=True)
 
 print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
