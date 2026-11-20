@@ -6,7 +6,7 @@ A zero-cost project with a phone-only browser subtitle editor and an optional lo
 
 Open the hosted dashboard on your phone and choose **START AI DUBBING** to open `mobile-studio.html`. This browser-only mode can preview a locally selected video, import an existing SRT subtitle file, edit subtitle text and timestamps, preview subtitles synchronized over the video, sort entries, export an SRT file, and save/restore a complete subtitle project as JSON. When you choose a video on the dashboard and continue, the file is handed to the mobile editor using on-device IndexedDB when the browser permits it; the video is not uploaded to a server. If the browser storage quota is insufficient, select the video again inside the editor.
 
-The mobile editor now includes an experimental on-device Whisper Tiny speech-to-text stage. The first use downloads the free model and browser runtime; speech recognition runs in the browser and the video is not uploaded. The browser captures and transcribes the selected video's audio in short segments. Performance and maximum practical video length depend on phone memory, browser support, and model download/cache availability. Review the generated text and timestamps. Generated speech, voice cloning, lip-sync, and final video rendering are not connected yet. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
+The mobile editor now includes an experimental on-device Whisper Tiny speech-to-text stage. The first use downloads the free model and browser runtime; speech recognition runs in the browser and the video is not uploaded. The browser captures and transcribes the selected video's audio in short segments. Performance and maximum practical video length depend on phone memory, browser support, and model download/cache availability. Review the generated text and timestamps. Local MMS text-to-speech is now connected for selected languages and can export a synchronized WAV audio track. MMS models are licensed CC-BY-NC 4.0 (non-commercial only); do not use these model weights for commercial work without separate permission. Voice cloning, multi-speaker identity matching, lip-sync, and final MP4 rendering are not connected yet. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
 
 The `local-worker/` folder remains available as an optional computer-based workflow. It is not required for the phone-only subtitle editor.
 
@@ -64,3 +64,11 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 - Translation uses the browser's built-in `Translator` API; source auto-detection uses `LanguageDetector` when available.
 - These APIs are not present in every browser/device or language pair. Unsupported combinations are reported rather than silently sent to a third party.
 - The app does not upload subtitle text to an external translation API.
+
+
+### Local text-to-speech (TTS)
+- The mobile editor can generate a WAV audio track from translated dialogue and place each generated utterance at its subtitle start timestamp.
+- Available browser model packs: Hindi, Arabic, English, French, Spanish, German, Portuguese and Russian.
+- Models run in the browser using Transformers.js; first use downloads model weights and requires free storage, memory and a supported browser.
+- The underlying Meta MMS-TTS models are licensed CC-BY-NC 4.0. This is **not a commercial-use license**. Obtain suitable permission or replace the model before any commercial use.
+- This creates a separate dubbed WAV track, not a final MP4. Video/audio muxing and voice cloning are still outstanding.
