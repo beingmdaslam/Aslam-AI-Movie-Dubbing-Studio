@@ -112,7 +112,7 @@ generateButton.addEventListener("click",async()=>{
  const invalid=entries.find(x=>x.start===null||x.end===null||x.end<=x.start);if(invalid){say("Dialogue "+invalid.index+" has invalid timestamps. Set a valid start and an end time after it.");return;}
  if(engine==="supertonic"&&!supertonicLanguages.has(lang)){say("This language is not supported by Supertonic 3. Choose MMS or another supported language.");return;}
  const duration=Number.isFinite($("preview").duration)?$("preview").duration:Math.max(...entries.map(x=>x.end/1000))+10;
- if(duration>900){say("For phone memory safety, dubbed audio export is limited to 15 minutes per pass.");return;}
+ const maxDuration=engine==="supertonic"?300:900;if(duration>maxDuration){say("For phone memory safety, this voice engine is limited to "+(maxDuration/60)+" minutes per pass. Split longer videos into shorter parts.");return;}
  busy=true;window.aslamTTSBusy=true;generateButton.disabled=true;loadButton.disabled=true;
  try{
   const rate=engine==="supertonic"?supertonic.sampleRate:16000,total=Math.ceil(duration*rate),mix=new Float32Array(total);
