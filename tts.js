@@ -101,6 +101,7 @@ loadButton.addEventListener("click",async()=>{
 $("targetLanguage").addEventListener("change",()=>{
  const lang=$("targetLanguage").value;
  if(loadedEngine==="supertonic"&&supertonicLanguages.has(lang)){loadedLanguage=lang;say("Supertonic 3 is ready for "+lang+".");return;}
+ if(loadedEngine==="supertonic"&&!supertonicLanguages.has(lang)){loadedLanguage=null;loadedEngine=null;generateButton.disabled=true;releaseSupertonic().catch(()=>{});say("Supertonic 3 does not support "+lang+". Choose MMS if a model is available.");return;}
  if(loadedLanguage&&loadedLanguage!==lang){synthesizer=null;loadedLanguage=null;loadedEngine=null;generateButton.disabled=true;say("Target language changed. Load the matching voice model.");}
 });
 generateButton.addEventListener("click",async()=>{
