@@ -119,6 +119,8 @@ if 'window.aslamASRBusy=true' not in asr_source or 'window.aslamTTSBusy=true' no
     raise SystemExit("Mobile AI model memory coordination is missing.")
 if "await window.aslamReleaseTTS()" not in asr_source:
     raise SystemExit("Whisper must wait for TTS model release before allocating memory.")
+if "video.duration>900" not in asr_source:
+    raise SystemExit("Whisper must wait for TTS model release before allocating memory.")
 if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
     raise SystemExit("Russian language option is missing from mobile transcription.")
 
