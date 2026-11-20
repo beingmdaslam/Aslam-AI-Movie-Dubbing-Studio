@@ -112,7 +112,11 @@ generateButton.addEventListener("click",async()=>{
  if(!entries.length){say("No dialogue text to speak. Transcribe or enter dialogue first.");return;}
  const invalid=entries.find(x=>x.start===null||x.end===null||x.end<=x.start);if(invalid){say("Dialogue "+invalid.index+" has invalid timestamps. Set a valid start and an end time after it.");return;}
  if(engine==="supertonic"&&!supertonicLanguages.has(lang)){say("This language is not supported by Supertonic 3. Choose MMS or another supported language.");return;}
- const duration=Number.isFinite($("preview").duration)?$("preview").duration:Math.max(...entries.map(x=>x.end/1000))+10;
+ const videoDuration=Number($("preview").duration);
+ const duration=Number.isFinite(videoDuration)&&videoDuration>0?videoDuration:Math.max(...entries.map(x=>x.end/1000))+10;
+ if(!Number.isFinite(duration)||duration<=0){say("Select a valid video or correct the dialogue timestamps before generating voice.");return;}
+ const beyond=entries.find(x=>x.end>duration*1000+250);
+ if(beyond){say("Dialogue "+beyond.index+" ends after the video duration. Correct its end timestamp to prevent clipped dubbing.");return;}
  const maxDuration=engine==="supertonic"?300:900;if(duration>maxDuration){say("For phone memory safety, this voice engine is limited to "+(maxDuration/60)+" minutes per pass. Split longer videos into shorter parts.");return;}
  busy=true;window.aslamTTSBusy=true;generateButton.disabled=true;loadButton.disabled=true;
  try{
