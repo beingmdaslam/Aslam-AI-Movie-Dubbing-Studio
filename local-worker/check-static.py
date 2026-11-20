@@ -101,6 +101,17 @@ for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-w
         raise SystemExit("Missing mobile processing module: " + module_name)
     subprocess.run([shutil.which("node") or "node", "--check", str(module_path)], check=True)
 
+
+asr_source = (ROOT.parent / "asr.js").read_text(encoding="utf-8")
+if "window.addLine=addLine" not in mobile_source or "window.addLine(" not in asr_source:
+    raise SystemExit("Whisper transcription must connect to the dialogue editor.")
+if any(name in asr_source for name in ("asrPipeline", "transcribeButton", "asrMessage")):
+    raise SystemExit("Whisper memory release contains stale variable names.")
+if 'window.aslamASRBusy=true' not in asr_source or 'window.aslamTTSBusy=true' not in (ROOT.parent / "tts.js").read_text(encoding="utf-8"):
+    raise SystemExit("Mobile AI model memory coordination is missing.")
+if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
+    raise SystemExit("Russian language option is missing from mobile transcription.")
+
 if 'classWorkerURL:new URL("/ffmpeg-worker.js"' not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg renderer must use the same-origin worker.")
 if not all(path in (ROOT.parent / "sw.js").read_text(encoding="utf-8") for path in ("/ffmpeg-worker.js", "/ffmpeg-constants.js", "/ffmpeg-errors.js")):
