@@ -1,7 +1,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const button=$("renderMp4"),status=$("renderStatus"),player=$("renderedVideo"),download=$("downloadMp4");
-let ffmpeg=null,loading=false,resultUrl=null;
+let ffmpeg=null,loading=false,resultUrl=null,workspaceFiles=[];
 function say(s){status.textContent=s;}
 button.addEventListener("click",async()=>{
  const selected=$("videoFile").files?.[0],previewSource=$("preview").src,wav=$("downloadDub").href;
@@ -18,12 +18,20 @@ button.addEventListener("click",async()=>{
    const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
    await ffmpeg.load({classWorkerURL:new URL("/ffmpeg-worker.js",location.href).href,coreURL:await toBlobURL(base+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")});
   }
-  say("Reading original video and dubbed WAV into browser memory…");
   const video=selected||await fetch(previewSource).then(r=>r.blob());
-  const videoBytes=new Uint8Array(await video.arrayBuffer()),audioResponse=await fetch(wav),audioBytes=new Uint8Array(await audioResponse.arrayBuffer());
+  const audioResponse=await fetch(wav);
+  if(!audioResponse.ok)throw new Error("Could not read the generated dubbed WAV audio.");
+  const audioBlob=await audioResponse.blob();
+  const maxVideoBytes=250*1024*1024,maxAudioBytes=150*1024*1024,maxCombinedBytes=300*1024*1024;
+  if(video.size>maxVideoBytes)throw new Error("Video exceeds the 250 MB phone-safety limit. Use a shorter or more compressed video.");
+  if(audioBlob.size>maxAudioBytes)throw new Error("Dubbed WAV exceeds the 150 MB phone-safety limit. Generate a shorter audio part.");
+  if(video.size+audioBlob.size>maxCombinedBytes)throw new Error("Video and audio exceed the 300 MB combined phone-safety limit. Use a smaller video.");
+  say("Reading files within phone-safety limits into browser memory…");
+  const videoBytes=new Uint8Array(await video.arrayBuffer()),audioBytes=new Uint8Array(await audioBlob.arrayBuffer());
   const originalName=selected?.name||"video.mp4";
   const ext=(originalName.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"");
   const inputName="source."+ext,outputName="aslam-ai-dubbed.mp4";
+  workspaceFiles=[inputName,"dubbed.wav","subtitles.srt",outputName];
   await ffmpeg.writeFile(inputName,videoBytes);await ffmpeg.writeFile("dubbed.wav",audioBytes);
   const embed=$("embedSubtitles").checked&&typeof window.aslamBuildSrt==="function",srt=embed?window.aslamBuildSrt():"";
   if(srt.trim())await ffmpeg.writeFile("subtitles.srt",new TextEncoder().encode(srt));
@@ -34,14 +42,14 @@ button.addEventListener("click",async()=>{
   say((mixMode==="mix"?"Mixing original sound quietly under dubbing":"Replacing original audio with dubbing")+(srt.trim()?" and embedding selectable subtitles":"")+" in the MP4 locally…");
   let maps=["-map","0:v:0",...audioMaps,...subtitleMaps];
   let args=[...inputs,...maps,...videoEncode,"-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName];
+  await ffmpeg.deleteFile(outputName).catch(()=>{});
   let code=await ffmpeg.exec(args);
-  if(code!==0&&mixMode==="mix"){usedMix=false;say("Original audio stream could not be mixed; retrying with dubbed audio replacement…");maps=["-map","0:v:0","-map","1:a:0",...subtitleMaps];args=[...inputs,...maps,...videoEncode,"-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName];code=await ffmpeg.exec(args);}
-  if(code!==0){say("Trying H.264 re-encoding for MP4 compatibility…");args=[...inputs,...maps,...scaleArgs,"-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","160k","-movflags","+faststart","-shortest",outputName];code=await ffmpeg.exec(args);}
+  if(code!==0&&mixMode==="mix"){usedMix=false;say("Original audio stream could not be mixed; retrying with dubbed audio replacement…");maps=["-map","0:v:0","-map","1:a:0",...subtitleMaps];args=[...inputs,...maps,...videoEncode,"-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName];await ffmpeg.deleteFile(outputName).catch(()=>{});code=await ffmpeg.exec(args);}
+  if(code!==0){say("Trying H.264 re-encoding for MP4 compatibility…");args=[...inputs,...maps,...scaleArgs,"-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","160k","-movflags","+faststart","-shortest",outputName];await ffmpeg.deleteFile(outputName).catch(()=>{});code=await ffmpeg.exec(args);}
   if(code!==0)throw new Error("FFmpeg exited with code "+code);
   const data=await ffmpeg.readFile(outputName),blob=new Blob([data],{type:"video/mp4"});
   if(resultUrl)URL.revokeObjectURL(resultUrl);resultUrl=URL.createObjectURL(blob);player.src=resultUrl;player.hidden=false;download.href=resultUrl;download.download="ASLAM-AI-Dubbed.mp4";download.hidden=false;
   say("MP4 rendered successfully in this browser. Original video track retained; "+(usedMix?"original audio mixed quietly under the dubbing.":"audio replaced by generated dubbing.")+" Review synchronization and sound before publishing.");
-  for(const name of [inputName,"dubbed.wav","subtitles.srt",outputName])await ffmpeg.deleteFile(name).catch(()=>{});
  }catch(e){say("MP4 render failed: "+(e?.message||"unknown error")+". This operation needs substantial free RAM/storage; try a shorter or smaller video. The original files remain unchanged.");}
- finally{loading=false;button.disabled=false;}
+ finally{if(ffmpeg)for(const name of workspaceFiles)await ffmpeg.deleteFile(name).catch(()=>{});workspaceFiles=[];loading=false;button.disabled=false;}
 });
