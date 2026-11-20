@@ -126,6 +126,8 @@ if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
 
 
 tts_source = (ROOT.parent / "tts.js").read_text(encoding="utf-8")
+if 'ur:"payam1394/traxlate-mms-tts-urd"' not in tts_source or "@huggingface/transformers@3.8.1" not in tts_source:
+    raise SystemExit("Urdu local TTS model or Transformers.js runtime is missing.")
 if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_source:
     raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if 'const maxDuration=engine==="supertonic"?300:900' not in tts_source:
