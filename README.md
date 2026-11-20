@@ -78,4 +78,4 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 - The render stage uses FFmpeg WebAssembly in the browser to combine the original video stream with the generated WAV audio. It can also embed the edited SRT as a selectable MP4 subtitle track (not permanently burned into the picture).
 - It first tries to copy the original video codec; if that cannot be muxed into MP4, it tries H.264 re-encoding.
 - The video is not uploaded to a server. The browser needs substantial memory and storage; long or high-resolution videos may fail on phones.
-- This replaces the original audio track; it does not yet duck/mix background music or perform lip-sync.
+- You can replace the original audio or mix it quietly (20%) under the generated dubbing. Lip-sync is not included.
