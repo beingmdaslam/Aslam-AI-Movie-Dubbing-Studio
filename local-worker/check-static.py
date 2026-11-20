@@ -92,7 +92,7 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
 
 
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
-for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", "allowedVoices=new Set", "e.source.length>10000", "e.translated.length>10000"):
+for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", "allowedVoices=new Set", "e.source.length>10000", "e.translated.length>10000", "maxDialogueLines=5000", "p.entries.length>maxDialogueLines", "applySubtitleDirection();status.textContent=\"Loaded \""):
     if safety_check not in mobile_source:
         raise SystemExit("Mobile subtitle/project import safety check is missing: " + safety_check)
 for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="ttsEngine"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
