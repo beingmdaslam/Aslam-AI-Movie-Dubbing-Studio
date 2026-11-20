@@ -1,7 +1,7 @@
 "use strict";
 const el=id=>document.getElementById(id);
 const load=el("loadAsr"),run=el("transcribeVideo"),status=el("asrStatus"),video=el("preview");
-let transcriber=null,loading=false;
+let transcriber=null,loading=false,audioContext=null,mediaSource=null;
 const languages={en:"english",hi:"hindi",ar:"arabic",ur:"arabic",fr:"french",es:"spanish",de:"german",tr:"turkish",pt:"portuguese",zh:"chinese",ja:"japanese"};
 function say(s){status.textContent=s;}
 load.addEventListener("click",async()=>{
@@ -48,7 +48,7 @@ run.addEventListener("click",async()=>{
  run.disabled=true;load.disabled=true;
  let ctx,src,node,gain,oldMuted=video.muted;
  try{
-  ctx=new AC();await ctx.resume();src=ctx.createMediaElementSource(video);node=ctx.createScriptProcessor(4096,2,1);gain=ctx.createGain();gain.gain.value=0;src.connect(node);node.connect(gain);gain.connect(ctx.destination);video.muted=false;
+  ctx=audioContext||new AC();audioContext=ctx;await ctx.resume();src=mediaSource||ctx.createMediaElementSource(video);mediaSource=src;node=ctx.createScriptProcessor(4096,2,1);gain=ctx.createGain();gain.gain.value=0;src.connect(node);node.connect(gain);gain.connect(ctx.destination);video.muted=false;
   const total=video.duration,step=25,found=[];let cursor=0;
   while(cursor<total){
    const span=Math.min(step,total-cursor);say("Capturing audio "+format(cursor*1000)+" … "+format((cursor+span)*1000));
@@ -67,5 +67,5 @@ run.addEventListener("click",async()=>{
   for(const item of found)window.addLine(format(Math.round(item.start*1000)),format(Math.round(item.end*1000)),"",item.text);
   say(found.length?"Transcription complete: "+found.length+" segments added. Review the text/timestamps, then export SRT.":"No speech was detected. Confirm this video has an audio track.");
  }catch(e){video.pause();say("Transcription failed: "+(e?.message||"unknown error")+". Long videos may exceed phone/browser memory.");}
- finally{video.muted=oldMuted;if(node){node.disconnect();node.onaudioprocess=null;}if(src)src.disconnect();if(gain)gain.disconnect();if(ctx)await ctx.close().catch(()=>{});run.disabled=!transcriber;load.disabled=false;}
+ finally{video.muted=oldMuted;if(node){node.disconnect();node.onaudioprocess=null;}if(src)src.disconnect();if(gain)gain.disconnect();run.disabled=!transcriber;load.disabled=false;}
 });
