@@ -17,7 +17,10 @@ async function getTranslator(src,dst){
 async function detectLanguage(text){
  if(!("LanguageDetector" in self))return null;
  const detector=await LanguageDetector.create({});const results=await detector.detect(text);detector.destroy?.();
- return results?.[0]?.confidence>0.5?results[0].detectedLanguage:null;
+ if(!(results?.[0]?.confidence>0.5))return null;
+ const detected=String(results[0].detectedLanguage||"").trim();
+ const base=detected.split("-")[0].toLowerCase();
+ return tags[base]?base:(detected||null);
 }
 function lineSource(card){return card.querySelector(".source").value.trim()||card.querySelector(".translated").value.trim();}
 async function translateCard(card){
