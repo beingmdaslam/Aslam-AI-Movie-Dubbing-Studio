@@ -98,6 +98,9 @@ for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", 
 for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="ttsEngine"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
+asr_source = (ROOT.parent / "asr.js").read_text(encoding="utf-8")
+if "rms<0.001" not in asr_source or "Math.min(span,rawStart)" not in asr_source or "Math.min(span,rawEnd)" not in asr_source:
+    raise SystemExit("ASR must skip silent audio segments and clamp Whisper timestamps to each segment.")
 for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-worker.js", "ffmpeg-constants.js", "ffmpeg-errors.js", "supertonic-helper.js"):
     module_path = ROOT.parent / module_name
     if not module_path.exists():
