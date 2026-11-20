@@ -122,6 +122,13 @@ if "await window.aslamReleaseTTS()" not in asr_source:
 if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
     raise SystemExit("Russian language option is missing from mobile transcription.")
 
+
+tts_source = (ROOT.parent / "tts.js").read_text(encoding="utf-8")
+if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_source:
+    raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
+if "dist/esm" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
+    raise SystemExit("FFmpeg module worker must load the ESM core.")
+
 if 'classWorkerURL:new URL("/ffmpeg-worker.js"' not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg renderer must use the same-origin worker.")
 if not all(path in (ROOT.parent / "sw.js").read_text(encoding="utf-8") for path in ("/ffmpeg-worker.js", "/ffmpeg-constants.js", "/ffmpeg-errors.js")):
