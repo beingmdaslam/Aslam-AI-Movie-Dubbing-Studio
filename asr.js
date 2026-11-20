@@ -7,8 +7,8 @@ function say(s){status.textContent=s;}
 window.addEventListener("aslam:release-asr",()=>{if(loading||processing){say("Finish the current speech task before loading another AI model.");return;}transcriber=null;run.disabled=true;if(mediaSource)mediaSource.disconnect();say("Whisper model released to free phone memory for another AI stage. Load it again when needed.");});
 load.addEventListener("click",async()=>{
  if(window.aslamTTSBusy||window.aslamTTSLoading){say("Finish the current voice task before loading Whisper.");return;}
- window.dispatchEvent(new Event("aslam:release-tts"));
  if(loading||transcriber)return;
+ if(window.aslamReleaseTTS)await window.aslamReleaseTTS();else window.dispatchEvent(new Event("aslam:release-tts"));
  loading=true;window.aslamASRLoading=true;load.disabled=true;say("Loading browser AI runtime…");
  try{
   const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2");
