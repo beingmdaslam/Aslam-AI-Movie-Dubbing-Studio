@@ -22,10 +22,9 @@ jobs:
           node-version: 22
       - name: Install FFmpeg and Playwright
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
           npm install --no-save playwright@1.52.0
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Create one-second test video
         run: ffmpeg -y -f lavfi -i color=c=black:s=640x360:r=24:d=1 -an -c:v libx264 -pix_fmt yuv420p "$RUNNER_TEMP/aslam-test.mp4"
       - name: Render dubbed MP4 in Chromium
