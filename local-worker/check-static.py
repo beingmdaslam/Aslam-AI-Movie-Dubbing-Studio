@@ -92,7 +92,7 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
 
 
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
-for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="exportSrt"', 'id="saveProject"', 'class="speaker"'):
+for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
 for module_name in ("asr.js", "translation.js", "tts.js", "render.js"):
