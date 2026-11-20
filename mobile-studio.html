@@ -11,10 +11,10 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id),fileInput=$("videoFile"),preview=$("preview"),caption=$("captionPreview"),lines=$("lines"),status=$("status");
-let videoUrl=null;
+let videoUrl=null;window.aslamOriginalVideoName="";
 function applySubtitleDirection(){const rtl=["ar","ur","fa","he"].includes($("targetLanguage").value);caption.dir=rtl?"rtl":"ltr";[...lines.querySelectorAll(".translated")].forEach(el=>{el.dir=rtl?"rtl":"ltr";el.style.textAlign=rtl?"right":"left";});}
 $("targetLanguage").addEventListener("change",applySubtitleDirection);
-fileInput.addEventListener("change",()=>{const f=fileInput.files&&fileInput.files[0];if(!f)return;if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=URL.createObjectURL(f);preview.src=videoUrl;preview.hidden=false;preview.load();status.textContent="Video selected: "+f.name;});
+fileInput.addEventListener("change",()=>{const f=fileInput.files&&fileInput.files[0];if(!f)return;window.aslamOriginalVideoName=f.name;if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=URL.createObjectURL(f);preview.src=videoUrl;preview.hidden=false;preview.load();status.textContent="Video selected: "+f.name;});
 async function restoreDashboardVideo(){
  if(!("indexedDB" in window)){status.textContent="Select your video here. This browser does not support local video handoff.";return;}
  let db;
@@ -26,6 +26,7 @@ async function restoreDashboardVideo(){
   if(settings.targetLanguage&&[...$("targetLanguage").options].some(o=>o.value===settings.targetLanguage))$("targetLanguage").value=settings.targetLanguage;
   if(settings.quality&&[...$("outputQuality").options].some(o=>o.value===settings.quality))$("outputQuality").value=settings.quality;
   if(!saved||!saved.blob)return;
+  window.aslamOriginalVideoName=saved.name||"video.mp4";
   if(videoUrl)URL.revokeObjectURL(videoUrl);
   videoUrl=URL.createObjectURL(saved.blob);
   preview.src=videoUrl;preview.hidden=false;preview.load();
