@@ -117,6 +117,8 @@ if any(name in asr_source for name in ("asrPipeline", "transcribeButton", "asrMe
     raise SystemExit("Whisper memory release contains stale variable names.")
 if 'window.aslamASRBusy=true' not in asr_source or 'window.aslamTTSBusy=true' not in (ROOT.parent / "tts.js").read_text(encoding="utf-8"):
     raise SystemExit("Mobile AI model memory coordination is missing.")
+if "await window.aslamReleaseTTS()" not in asr_source:
+    raise SystemExit("Whisper must wait for TTS model release before allocating memory.")
 if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
     raise SystemExit("Russian language option is missing from mobile transcription.")
 
