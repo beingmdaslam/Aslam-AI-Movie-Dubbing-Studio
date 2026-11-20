@@ -13,7 +13,7 @@ on:
       - ".github/workflows/mobile-browser-smoke.yml"
 jobs:
   browser-render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
