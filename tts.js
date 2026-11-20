@@ -4,6 +4,7 @@ const loadButton=$("loadTts"),generateButton=$("generateDub"),status=$("ttsStatu
 const models={hi:"Xenova/mms-tts-hin",ar:"Xenova/mms-tts-ara",en:"Xenova/mms-tts-eng",fr:"Xenova/mms-tts-fra",es:"Xenova/mms-tts-spa",de:"Xenova/mms-tts-deu",pt:"Xenova/mms-tts-por",ru:"Xenova/mms-tts-rus"};
 let synthesizer=null,loadedLanguage=null,busy=false,outputUrl=null;
 function say(s){status.textContent=s;}
+window.addEventListener("aslam:release-tts",()=>{synthesizer=null;loadedLanguage=null;generateButton.disabled=true;say("Voice model released to free phone memory for another AI stage. Load it again when needed.");});
 function wavBlob(samples,sampleRate){
  const buffer=new ArrayBuffer(44+samples.length*2),view=new DataView(buffer);
  const write=(offset,value)=>{for(let i=0;i<value.length;i++)view.setUint8(offset+i,value.charCodeAt(i));};
@@ -12,6 +13,7 @@ function wavBlob(samples,sampleRate){
  return new Blob([buffer],{type:"audio/wav"});
 }
 loadButton.addEventListener("click",async()=>{
+ window.dispatchEvent(new Event("aslam:release-asr"));
  const lang=$("targetLanguage").value,model=models[lang];
  if(!model){say("No bundled local TTS model for "+lang+". Choose Hindi, Arabic, English, French, Spanish, German, Portuguese or Russian.");return;}
  if(busy)return;busy=true;loadButton.disabled=true;generateButton.disabled=true;
