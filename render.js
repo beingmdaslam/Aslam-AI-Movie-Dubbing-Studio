@@ -15,7 +15,7 @@ button.addEventListener("click",async()=>{
    const {toBlobURL}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js");
    ffmpeg=new FFmpeg();
    ffmpeg.on("log",({message})=>{if(message)say("Rendering: "+message.slice(-180));});
-   const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+   const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
    await ffmpeg.load({classWorkerURL:new URL("/ffmpeg-worker.js",location.href).href,coreURL:await toBlobURL(base+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")});
   }
   say("Reading original video and dubbed WAV into browser memory…");
