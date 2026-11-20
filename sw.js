@@ -1,5 +1,5 @@
-const CACHE_NAME = "aslam-ai-mobile-v14";
-const APP_SHELL = ["/", "/index.html", "/mobile-studio.html", "/asr.js", "/translation.js", "/tts.js", "/render.js","/ffmpeg-worker.js","/ffmpeg-constants.js","/ffmpeg-errors.js", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "aslam-ai-mobile-v15";
+const APP_SHELL = ["/", "/index.html", "/mobile-studio.html", "/asr.js", "/translation.js", "/tts.js", "/render.js","/ffmpeg-worker.js","/ffmpeg-constants.js","/ffmpeg-errors.js","/supertonic-helper.js", "/manifest.webmanifest", "/icon.svg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
