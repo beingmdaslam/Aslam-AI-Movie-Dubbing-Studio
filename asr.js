@@ -2,7 +2,7 @@
 const el=id=>document.getElementById(id);
 const load=el("loadAsr"),run=el("transcribeVideo"),status=el("asrStatus"),video=el("preview");
 let transcriber=null,loading=false,audioContext=null,mediaSource=null;
-const languages={en:"english",hi:"hindi",ar:"arabic",ur:"arabic",fr:"french",es:"spanish",de:"german",tr:"turkish",pt:"portuguese",zh:"chinese",ja:"japanese"};
+const languages={en:"english",hi:"hindi",ar:"arabic",ur:"urdu",fr:"french",es:"spanish",de:"german",tr:"turkish",pt:"portuguese",zh:"chinese",ja:"japanese"};
 function say(s){status.textContent=s;}
 load.addEventListener("click",async()=>{
  if(loading||transcriber)return;
@@ -64,7 +64,7 @@ run.addEventListener("click",async()=>{
   }
   video.pause();video.currentTime=0;
   found.sort((a,b)=>a.start-b.start);
-  for(const item of found)window.addLine(format(Math.round(item.start*1000)),format(Math.round(item.end*1000)),"",item.text);
+  for(const item of found)window.addLine(format(Math.round(item.start*1000)),format(Math.round(item.end*1000)),item.text,"");
   say(found.length?"Transcription complete: "+found.length+" segments added. Review the text/timestamps, then export SRT.":"No speech was detected. Confirm this video has an audio track.");
  }catch(e){video.pause();say("Transcription failed: "+(e?.message||"unknown error")+". Long videos may exceed phone/browser memory.");}
  finally{video.muted=oldMuted;if(node){node.disconnect();node.onaudioprocess=null;}if(src)src.disconnect();if(gain)gain.disconnect();run.disabled=!transcriber;load.disabled=false;}
