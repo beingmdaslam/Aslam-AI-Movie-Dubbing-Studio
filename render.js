@@ -28,7 +28,7 @@ button.addEventListener("click",async()=>{
   if(video.size+audioBlob.size>maxCombinedBytes)throw new Error("Video and audio exceed the 300 MB combined phone-safety limit. Use a smaller video.");
   say("Reading files within phone-safety limits into browser memory…");
   const videoBytes=new Uint8Array(await video.arrayBuffer()),audioBytes=new Uint8Array(await audioBlob.arrayBuffer());
-  const originalName=selected?.name||"video.mp4";
+  const originalName=selected?.name||window.aslamOriginalVideoName||"video.mp4";
   const ext=(originalName.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"");
   const inputName="source."+ext,outputName="aslam-ai-dubbed.mp4";
   workspaceFiles=[inputName,"dubbed.wav","subtitles.srt",outputName];
