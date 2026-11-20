@@ -14,7 +14,8 @@ The `local-worker/` folder remains available as an optional computer-based workf
 
 1. Select a movie in the local studio.
 2. Transcribe dialogue and timestamps with faster-whisper.
-3. Alternatively, use the phone editor's experimental local Whisper Tiny ASR to generate draft dialogue segments. This first-use model download requires internet and enough browser storage/RAM.\n4. Group similar voices into speaker labels with SpeechBrain ECAPA (review is required; this is approximate).
+3. Alternatively, use the phone editor's experimental local Whisper Tiny ASR to generate draft dialogue segments. This first-use model download requires internet and enough browser storage/RAM.
+4. Group similar voices into speaker labels with SpeechBrain ECAPA (review is required; this is approximate).
 5. Install and use a free Argos Translate language model locally.
 6. Edit translated dialogue and speaker labels.
 7. Export an SRT subtitle file or burn subtitles into an MP4 with FFmpeg.
@@ -75,7 +76,7 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 
 
 ### Final MP4 muxing
-- The render stage uses FFmpeg WebAssembly in the browser to combine the original video stream with the generated WAV audio. It can also embed the edited SRT as a selectable MP4 subtitle track (not permanently burned into the picture).
+- The render stage uses FFmpeg WebAssembly in the browser with a same-origin worker helper to combine the original video stream with the generated WAV audio. It supports keeping the original resolution or limiting output to 720p, 1080p or 4K (it does not upscale a smaller source). It can also embed the edited SRT as a selectable MP4 subtitle track (not permanently burned into the picture).
 - It first tries to copy the original video codec; if that cannot be muxed into MP4, it tries H.264 re-encoding.
-- The video is not uploaded to a server. The browser needs substantial memory and storage; long or high-resolution videos may fail on phones.
+- The video is not uploaded to a server. The browser needs substantial memory and storage; long or high-resolution videos may fail on phones. Resolution changes re-encode video and may take much longer than keeping the original codec.
 - You can replace the original audio or mix it quietly (20%) under the generated dubbing. Lip-sync is not included.
