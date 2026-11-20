@@ -6,7 +6,7 @@ A zero-cost project with a phone-only browser subtitle editor and an optional lo
 
 Open the hosted dashboard on your phone and choose **START AI DUBBING** to open `mobile-studio.html`. This browser-only mode can preview a locally selected video, import an existing SRT subtitle file, edit subtitle text and timestamps, preview subtitles synchronized over the video, sort entries, export an SRT file, and save/restore a complete subtitle project as JSON. When you choose a video on the dashboard and continue, the file is handed to the mobile editor using on-device IndexedDB when the browser permits it; the video is not uploaded to a server. If the browser storage quota is insufficient, select the video again inside the editor.
 
-The mobile editor now includes an experimental on-device Whisper Tiny speech-to-text stage. The first use downloads the free model and browser runtime; speech recognition runs in the browser and the video is not uploaded. The browser captures and transcribes the selected video's audio in short segments. Performance and maximum practical video length depend on phone memory, browser support, and model download/cache availability. Review the generated text and timestamps. Local MMS text-to-speech is now connected for selected languages and can export a synchronized WAV audio track. MMS models are licensed CC-BY-NC 4.0 (non-commercial only); do not use these model weights for commercial work without separate permission. Voice cloning, multi-speaker identity matching, lip-sync, and final MP4 rendering are not connected yet. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
+The mobile editor includes experimental on-device Whisper Tiny speech-to-text, local MMS text-to-speech, and browser-based FFmpeg MP4 muxing. First use downloads free model/runtime files; speech recognition, voice generation, and muxing run in the browser and do not upload the video. Performance and practical video length depend on phone memory, browser support, and model download/cache availability. Review generated text, timestamps, synchronization, and audio quality. MMS models are licensed CC-BY-NC 4.0 (non-commercial only); do not use these model weights commercially without separate permission. Dialogue lines support manual speaker labels for cast tracking, but automatic diarization, separate speaker voice assignment/identity matching, voice cloning, and lip-sync are not implemented. This is an experimental local workflow, not a guarantee of full-length movie processing on every phone.
 
 The `local-worker/` folder remains available as an optional computer-based workflow. It is not required for the phone-only subtitle editor.
 
@@ -18,7 +18,7 @@ The `local-worker/` folder remains available as an optional computer-based workf
 5. Install and use a free Argos Translate language model locally.
 6. Edit translated dialogue and speaker labels.
 7. Export an SRT subtitle file or burn subtitles into an MP4 with FFmpeg.
-8. Optionally run Wav2Lip with an existing dubbed audio track, if its separate model and compatible environment have been installed.
+8. Render a dubbed MP4 in the phone browser using FFmpeg WebAssembly, replacing or mixing the original audio and optionally embedding selectable subtitles. The phone may run out of memory on long/high-resolution videos.
 
 **Voice cloning is not part of the current guided workflow.** Wav2Lip only synchronizes mouth movement to audio you provide; it does not create speech. Use only audio you own or are authorized to use.
 
@@ -34,7 +34,7 @@ Requirements: Windows, Python 3.11, internet for first-time package/model downlo
 6. Open `http://127.0.0.1:8765/studio` on that same computer.
 7. On first use, select a video up to 1 GB. The first transcription and translation runs may download model files and take time.
 
-The hosted dashboard now opens `mobile-studio.html`, which does not require the local worker. The local worker is an optional separate workflow and is not required for phone-only subtitle editing.
+The hosted dashboard opens `mobile-studio.html`, which provides the experimental phone-only workflow. The local worker is an optional separate computer-based workflow.
 
 ## Checks and troubleshooting
 
@@ -53,7 +53,7 @@ The automated self-test uses synthetic media and fake AI adapters. It checks app
 - The local worker currently accepts files up to 1 GB.
 - Translation quality and available language pairs vary by Argos model.
 - Speaker grouping is approximate and should be manually reviewed.
-- Wav2Lip is optional, requires a separate setup and compatible checkpoint, and its upstream license restricts commercial use. Review its terms before use.
+- Mobile MP4 rendering uses FFmpeg WebAssembly and may fail when the browser cannot allocate enough memory. Test short clips first.
 - Do not expose the local worker directly to the public internet.
 
 See [local-worker/README.md](local-worker/README.md) for detailed API routes, installation steps, model setup, and limitations.
@@ -71,7 +71,7 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 - Available browser model packs: Hindi, Arabic, English, French, Spanish, German, Portuguese and Russian.
 - Models run in the browser using Transformers.js; first use downloads model weights and requires free storage, memory and a supported browser.
 - The underlying Meta MMS-TTS models are licensed CC-BY-NC 4.0. This is **not a commercial-use license**. Obtain suitable permission or replace the model before any commercial use.
-- This creates a separate dubbed WAV track, not a final MP4. Video/audio muxing and voice cloning are still outstanding.
+- This creates a separate dubbed WAV track. The editor can mux it into MP4 locally; voice cloning and distinct speaker voices are still outstanding.
 
 
 ### Final MP4 muxing
