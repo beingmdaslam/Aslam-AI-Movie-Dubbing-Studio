@@ -70,7 +70,7 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 ### Local text-to-speech (TTS)
 - The mobile editor can generate a WAV audio track from translated dialogue and place each generated utterance at its subtitle start timestamp. Select MMS for a single voice per language, or optionally load Supertonic 3 for ten preset male/female voices and consistent per-character voice assignments across 31 supported languages. Supertonic 3 downloads about 400 MB on first use and runs locally with ONNX Runtime Web (WebGPU where available, otherwise WASM).
 - Available browser model packs: Hindi, Arabic, English, French, Spanish, German, Portuguese and Russian.
-- Models run in the browser using Transformers.js; first use downloads model weights and requires free storage, memory and a supported browser.
+- Whisper and MMS run in the browser using Transformers.js; Supertonic runs with ONNX Runtime Web. First use downloads model weights and requires free storage, memory and a supported browser.
 - The underlying Meta MMS-TTS models are licensed CC-BY-NC 4.0. This is **not a commercial-use license**. Obtain suitable permission or replace the model before any commercial use. Supertonic 3 weights use the OpenRAIL-M license; review its restrictions before redistribution or commercial use.
 - This creates a separate dubbed WAV track. The editor can mux it into MP4 locally. Supertonic's preset voices are not voice cloning and do not imitate a real person.
 
