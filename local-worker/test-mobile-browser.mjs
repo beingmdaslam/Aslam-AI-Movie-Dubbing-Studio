@@ -25,7 +25,7 @@ try{
  page.on("pageerror",e=>errors.push(e.message));
  await page.goto("http://127.0.0.1:4173/mobile-studio.html",{waitUntil:"domcontentloaded"});
  await page.locator("#videoFile").setInputFiles(inputPath);
- await page.waitForFunction(()=>document.querySelector("#preview").readyState>=1,{timeout:15000});
+ await page.waitForFunction(()=>document.querySelector("#preview").readyState>=1,null,{timeout:15000});
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
   const put=(o,t)=>{for(let i=0;i<t.length;i++)view.setUint8(o+i,t.charCodeAt(i));};
@@ -41,7 +41,7 @@ try{
  await page.waitForFunction(()=>{
   const text=document.querySelector("#renderStatus").textContent;
   return text.includes("MP4 rendered successfully")||text.includes("MP4 render failed");
- },{timeout:240000});
+ },null,{timeout:240000});
  const result=await page.evaluate(async()=>{
   const link=document.querySelector("#downloadMp4");
   if(link.hidden||!link.href)return {size:0,type:""};
