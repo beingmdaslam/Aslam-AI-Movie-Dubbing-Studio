@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install FFmpeg and Playwright
+      - name: Install Playwright and Chromium headless shell
         run: |
           npm install --no-save playwright@1.52.0
           npx playwright install --only-shell chromium
