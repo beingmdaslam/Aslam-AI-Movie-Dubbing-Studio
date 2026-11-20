@@ -40,3 +40,9 @@ The browser downloads the FFmpeg engine at runtime from jsDelivr. Anyone redistr
 - Transformers.js: Apache License 2.0.
 
 These runtimes are fetched from their public package CDNs at runtime. Their respective license texts are available in their upstream repositories.
+
+
+## Urdu MMS ONNX conversion
+
+- Model: https://huggingface.co/payam1394/traxlate-mms-tts-urd
+- License: CC-BY-NC-4.0, inherited from Meta MMS Urdu. Non-commercial use only unless separate permission is obtained.
