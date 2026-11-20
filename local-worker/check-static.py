@@ -120,16 +120,16 @@ if 'window.aslamASRBusy=true' not in asr_source or 'window.aslamTTSBusy=true' no
 if "await window.aslamReleaseTTS()" not in asr_source:
     raise SystemExit("Whisper must wait for TTS model release before allocating memory.")
 if "video.duration>900" not in asr_source:
-    raise SystemExit("Whisper must wait for TTS model release before allocating memory.")
+    raise SystemExit("Whisper transcription must be capped at 15 minutes on phones.")
 if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
     raise SystemExit("Russian language option is missing from mobile transcription.")
 
 
 tts_source = (ROOT.parent / "tts.js").read_text(encoding="utf-8")
 if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_source:
+    raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if 'const maxDuration=engine==="supertonic"?300:900' not in tts_source:
     raise SystemExit("Supertonic phone-memory duration limit is missing.")
-    raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if "dist/esm" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg module worker must load the ESM core.")
 
