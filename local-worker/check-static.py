@@ -125,6 +125,8 @@ if 'value="ru"' not in mobile_source or 'ru:"russian"' not in asr_source:
 
 tts_source = (ROOT.parent / "tts.js").read_text(encoding="utf-8")
 if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_source:
+if 'const maxDuration=engine==="supertonic"?300:900' not in tts_source:
+    raise SystemExit("Supertonic phone-memory duration limit is missing.")
     raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if "dist/esm" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg module worker must load the ESM core.")
