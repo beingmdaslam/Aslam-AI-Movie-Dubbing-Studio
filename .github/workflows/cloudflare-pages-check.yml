@@ -1,0 +1,73 @@
+name: Cloudflare Pages checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "functions/**"
+      - "wrangler.toml"
+      - "package.json"
+      - ".github/workflows/cloudflare-pages-check.yml"
+  pull_request:
+    paths:
+      - "functions/**"
+      - "wrangler.toml"
+      - "package.json"
+      - ".github/workflows/cloudflare-pages-check.yml"
+  workflow_dispatch:
+
+jobs:
+  pages-functions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install --ignore-scripts
+      - name: Validate build and Pages function syntax
+        run: |
+          npm run build
+          node --check functions/api/status.js
+          node --check functions/api/create-upload.js
+      - name: Smoke-test Cloudflare Pages API handlers
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { onRequestGet } from "./functions/api/status.js";
+          import { onRequestPost } from "./functions/api/create-upload.js";
+
+          const status = await onRequestGet();
+          assert.equal(status.status, 200);
+          const statusBody = await status.json();
+          assert.equal(statusBody.success, true);
+          assert.equal(statusBody.backend, "Cloudflare Pages Functions");
+
+          const invalidJson = await onRequestPost({
+            request: new Request("https://example.test/api/create-upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: "{"
+            }),
+            env: {}
+          });
+          assert.equal(invalidJson.status, 400);
+
+          const missingR2 = await onRequestPost({
+            request: new Request("https://example.test/api/create-upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                fileName: "clip.mp4",
+                contentType: "video/mp4",
+                fileSize: 1024
+              })
+            }),
+            env: {}
+          });
+          assert.equal(missingR2.status, 503);
+          const missingBody = await missingR2.json();
+          assert.match(missingBody.error, /R2 is not configured/);
+          console.log("Cloudflare Pages API smoke tests passed.");
+          NODE
