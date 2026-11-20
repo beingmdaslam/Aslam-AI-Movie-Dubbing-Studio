@@ -26,6 +26,15 @@ try{
  const videoBytes=await page.evaluate(async()=>{const canvas=document.createElement("canvas");canvas.width=640;canvas.height=360;const ctx=canvas.getContext("2d"),stream=canvas.captureStream(24),recorder=new MediaRecorder(stream,{mimeType:"video/webm;codecs=vp8"}),chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const stopped=new Promise(resolve=>recorder.onstop=resolve);recorder.start();for(let i=0;i<24;i++){ctx.fillStyle=i%2?"#101010":"#303030";ctx.fillRect(0,0,640,360);await new Promise(resolve=>requestAnimationFrame(resolve));}recorder.stop();await stopped;stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"video/webm"});return Array.from(new Uint8Array(await blob.arrayBuffer()));});
  await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
  await page.waitForFunction(()=>document.querySelector("#videoFile").files.length===1,null,{timeout:10000});
+ await page.locator("#srtFile").setInputFiles({name:"validation.srt",mimeType:"text/plain",buffer:Buffer.from("1\n00:00:00,000 --> 00:00:01,200\nValid subtitle\n\n2\n00:00:02,000 --> 00:00:01,000\nReversed timestamps\n\n3\nNo timestamp line\nIgnored line\n")});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("invalid entries skipped"),null,{timeout:10000});
+ const importedCount=await page.locator("#lines > .line").count();
+ if(importedCount!==1)throw new Error("SRT import did not discard malformed timestamps; line count: "+importedCount);
+ const project={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"hi",entries:[{start:"00:00:00,000",end:"00:00:02,000",source:"Hello",translated:"नमस्ते",speaker:"S".repeat(80),voice:"../../unexpected"}]};
+ await page.locator("#projectFile").setInputFiles({name:"sanitization.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(project))});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
+ const sanitized=await page.locator("#lines > .line").first().evaluate(el=>({speaker:el.querySelector(".speaker").value,voice:el.querySelector(".speakerVoice").value}));
+ if(sanitized.speaker.length!==40||sanitized.voice!=="M1")throw new Error("Project import did not sanitize speaker/voice fields: "+JSON.stringify(sanitized));
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
   const put=(o,t)=>{for(let i=0;i<t.length;i++)view.setUint8(o+i,t.charCodeAt(i));};
