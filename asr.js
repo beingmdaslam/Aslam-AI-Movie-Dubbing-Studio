@@ -31,7 +31,7 @@ function capture(context,node,start,duration){
  const target=Math.ceil(duration*context.sampleRate);
  return new Promise((resolve,reject)=>{
   let blocks=[],count=0,done=false;
-  const cleanup=()=>{node.onaudioprocess=null;video.removeEventListener("seeked",begin);video.removeEventListener("error",fail);};
+  const cleanup=()=>{node.onaudioprocess=null;video.removeEventListener("seeked",begin);video.removeEventListener("loadeddata",begin);video.removeEventListener("canplay",begin);video.removeEventListener("error",fail);};
   const finish=()=>{if(done)return;done=true;video.pause();cleanup();const data=new Float32Array(count);let offset=0;for(const b of blocks){const n=Math.min(b.length,count-offset);data.set(b.subarray(0,n),offset);offset+=n;if(offset===count)break;}resolve(data);};
   const fail=()=>{if(done)return;done=true;video.pause();cleanup();reject(new Error("Could not seek or read the selected video's audio."));};
   node.onaudioprocess=e=>{
@@ -43,6 +43,8 @@ function capture(context,node,start,duration){
   };
   const begin=()=>{if(done||video.seeking)return;video.play().catch(fail);};
   video.addEventListener("seeked",begin);
+  video.addEventListener("loadeddata",begin);
+  video.addEventListener("canplay",begin);
   video.addEventListener("error",fail,{once:true});
   video.pause();
   video.currentTime=start;
