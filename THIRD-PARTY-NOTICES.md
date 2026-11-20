@@ -19,7 +19,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 The optional multilingual model and its ten preset voice styles are downloaded from the archived Supertone Hugging Face repository:
 
 - Model: https://huggingface.co/supertone-oss-archive/supertonic-3
-- License: OpenRAIL-M (see the model repository's LICENSE file)
+- License: OpenRAIL-M (https://huggingface.co/supertone-oss-archive/supertonic-3/blob/main/LICENSE)
 
 The model is a separate artifact from the MIT-licensed browser helper code. Review the OpenRAIL-M restrictions and attribution requirements before redistribution or commercial use.
 
@@ -30,7 +30,7 @@ The optional MMS models are community ONNX conversions of Meta MMS checkpoints. 
 ## FFmpeg WebAssembly
 
 - `@ffmpeg/ffmpeg` 0.12.15 wrapper: MIT license.
-- `@ffmpeg/core` 0.12.10: GPL-2.0-or-later license.
+- `@ffmpeg/core` 0.12.10: GPL-2.0-or-later license (https://github.com/ffmpegwasm/ffmpeg.wasm/tree/main/packages/core).
 
 The browser downloads the FFmpeg engine at runtime from jsDelivr. Anyone redistributing the application or binaries must review and comply with the applicable FFmpeg license terms.
 
