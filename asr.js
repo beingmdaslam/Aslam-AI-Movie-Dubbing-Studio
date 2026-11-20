@@ -4,7 +4,9 @@ const load=el("loadAsr"),run=el("transcribeVideo"),status=el("asrStatus"),video=
 let transcriber=null,loading=false,audioContext=null,mediaSource=null;
 const languages={en:"english",hi:"hindi",ar:"arabic",ur:"urdu",fr:"french",es:"spanish",de:"german",tr:"turkish",pt:"portuguese",zh:"chinese",ja:"japanese"};
 function say(s){status.textContent=s;}
+window.addEventListener("aslam:release-asr",()=>{asrPipeline=null;transcribeButton.disabled=true;asrMessage("Whisper model released to free phone memory for another AI stage. Load it again when needed.");});
 load.addEventListener("click",async()=>{
+ window.dispatchEvent(new Event("aslam:release-tts"));
  if(loading||transcriber)return;
  loading=true;load.disabled=true;say("Loading browser AI runtime…");
  try{
