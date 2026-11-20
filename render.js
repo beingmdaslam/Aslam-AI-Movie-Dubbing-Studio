@@ -4,8 +4,8 @@ const button=$("renderMp4"),status=$("renderStatus"),player=$("renderedVideo"),d
 let ffmpeg=null,loading=false,resultUrl=null;
 function say(s){status.textContent=s;}
 button.addEventListener("click",async()=>{
- const video=$("videoFile").files?.[0],wav=$("downloadDub").href;
- if(!video){say("Choose the original video file first.");return;}
+ const selected=$("videoFile").files?.[0],previewSource=$("preview").src,wav=$("downloadDub").href;
+ if(!selected&&!previewSource){say("Choose the original video file first.");return;}
  if(!$("downloadDub").href||$("downloadDub").hidden){say("Generate dubbed WAV audio first.");return;}
  if(loading)return;loading=true;button.disabled=true;
  try{
@@ -19,12 +19,15 @@ button.addEventListener("click",async()=>{
    await ffmpeg.load({coreURL:await toBlobURL(base+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")});
   }
   say("Reading original video and dubbed WAV into browser memory…");
+  const video=selected||await fetch(previewSource).then(r=>r.blob());
   const videoBytes=new Uint8Array(await video.arrayBuffer()),audioResponse=await fetch(wav),audioBytes=new Uint8Array(await audioResponse.arrayBuffer());
-  const ext=(video.name.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const originalName=selected?.name||"video.mp4";
+  const ext=(originalName.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"");
   const inputName="source."+ext,outputName="aslam-ai-dubbed.mp4";
   await ffmpeg.writeFile(inputName,videoBytes);await ffmpeg.writeFile("dubbed.wav",audioBytes);
   say("Replacing original audio with the generated dubbed WAV. Video is processed on this device…");
-  const code=await ffmpeg.exec(["-i",inputName,"-i","dubbed.wav","-map","0:v:0","-map","1:a:0","-c:v","copy","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName]);
+  let code=await ffmpeg.exec(["-i",inputName,"-i","dubbed.wav","-map","0:v:0","-map","1:a:0","-c:v","copy","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName]);
+  if(code!==0){say("Copying the original video codec did not work. Trying H.264 re-encoding…");code=await ffmpeg.exec(["-i",inputName,"-i","dubbed.wav","-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","160k","-movflags","+faststart","-shortest",outputName]);}
   if(code!==0)throw new Error("FFmpeg exited with code "+code);
   const data=await ffmpeg.readFile(outputName),blob=new Blob([data],{type:"video/mp4"});
   if(resultUrl)URL.revokeObjectURL(resultUrl);resultUrl=URL.createObjectURL(blob);player.src=resultUrl;player.hidden=false;download.href=resultUrl;download.download="ASLAM-AI-Dubbed.mp4";download.hidden=false;
