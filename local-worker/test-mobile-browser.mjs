@@ -23,9 +23,11 @@ try{
  const page=await browser.newPage();
  const errors=[];
  page.on("pageerror",e=>errors.push(e.message));
+ page.on("console",msg=>{if(msg.type()==="error")errors.push("console: "+msg.text());});
  await page.goto("http://127.0.0.1:4173/mobile-studio.html",{waitUntil:"domcontentloaded"});
  await page.locator("#videoFile").setInputFiles(inputPath);
- await page.waitForFunction(()=>document.querySelector("#preview").readyState>=1,null,{timeout:15000});
+ await page.waitForFunction(()=>document.querySelector("#preview").src.startsWith("blob:"),null,{timeout:15000}).catch(async()=>{const state=await page.evaluate(()=>({src:document.querySelector("#preview")?.src,readyState:document.querySelector("#preview")?.readyState,file:document.querySelector("#videoFile")?.files?.[0]?.name}));throw new Error("Video selection did not reach preview: "+JSON.stringify(state)+"; browser errors: "+errors.join(" | "));});
+ await page.waitForFunction(()=>document.querySelector("#preview").readyState>=1,null,{timeout:30000}).catch(async()=>{const state=await page.evaluate(()=>({src:document.querySelector("#preview")?.src,readyState:document.querySelector("#preview")?.readyState,error:document.querySelector("#preview")?.error?.message}));throw new Error("Video metadata did not load: "+JSON.stringify(state)+"; browser errors: "+errors.join(" | "));});
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
   const put=(o,t)=>{for(let i=0;i<t.length;i++)view.setUint8(o+i,t.charCodeAt(i));};
