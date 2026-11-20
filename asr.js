@@ -59,11 +59,14 @@ run.addEventListener("click",async()=>{
    const span=Math.min(step,total-cursor);say("Capturing audio "+format(cursor*1000)+" … "+format((cursor+span)*1000));
    const raw=await capture(ctx,node,cursor,span);if(!raw.length)break;
    const audio=resample(raw,ctx.sampleRate);
+   let energy=0;for(let i=0;i<audio.length;i++)energy+=audio[i]*audio[i];
+   const rms=audio.length?Math.sqrt(energy/audio.length):0;
+   if(rms<0.001){cursor+=span;say("Quiet segment skipped. Recognized "+Math.min(cursor,total).toFixed(0)+" / "+total.toFixed(0)+" seconds; "+found.length+" speech segments.");continue;}
    say("Whisper is recognizing "+format(cursor*1000)+" …");
    const language=el("sourceLanguage").value,opts={sampling_rate:16000,return_timestamps:true};
    if(languages[language])opts.language=languages[language];
    const result=await transcriber(audio,opts),chunks=Array.isArray(result?.chunks)?result.chunks:[];
-   if(chunks.length){for(const part of chunks){const text=(part.text||"").trim();if(!text)continue;const t=part.timestamp||[0,span],a=cursor+(Number(t[0])||0),b=cursor+(Number(t[1])||span);found.push({start:a,end:Math.max(a+.5,b),text});}}
+   if(chunks.length){for(const part of chunks){const text=(part.text||"").trim();if(!text)continue;const t=part.timestamp||[0,span],rawStart=Number(t[0]),rawEnd=Number(t[1]),start=Number.isFinite(rawStart)?Math.max(0,Math.min(span,rawStart)):0,end=Number.isFinite(rawEnd)?Math.max(start+.05,Math.min(span,rawEnd)):span;found.push({start:cursor+start,end:cursor+end,text});}}
    else if(result?.text?.trim())found.push({start:cursor,end:cursor+span,text:result.text.trim()});
    cursor+=span;say("Recognized "+Math.min(cursor,total).toFixed(0)+" / "+total.toFixed(0)+" seconds; "+found.length+" segments.");
   }
