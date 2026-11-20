@@ -42,6 +42,10 @@ try{
  await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Could not load project"),null,{timeout:10000});
  const preservedAfterRejectedImport=await page.locator("#lines > .line").count();
  if(preservedAfterRejectedImport!==1||await page.locator(".speaker").inputValue()!=="S".repeat(40))throw new Error("Rejected project import damaged the existing dialogue state.");
+ const oversizedProject={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"hi",entries:Array.from({length:1001},()=>({start:"00:00:00,000",end:"00:00:01,000",source:"x",translated:"y",speaker:"A",voice:"M1"}))};
+ await page.locator("#projectFile").setInputFiles({name:"oversized-project.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(oversizedProject))});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Could not load project"),null,{timeout:10000});
+ if(await page.locator("#lines > .line").count()!==1)throw new Error("Oversized project import was not rejected atomically.");
 
  await page.evaluate(()=>document.querySelector("#lines").replaceChildren());
  await page.locator("#addLine").click();
