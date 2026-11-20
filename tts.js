@@ -130,9 +130,13 @@ generateButton.addEventListener("click",async()=>{
     sampleRate=result.sampling_rate;audio=result.audio;
    }
    if(!audio?.length)throw new Error("Voice model returned empty audio for dialogue "+item.index);
-   const offset=Math.max(0,Math.round(item.start/1000*rate)),ratio=sampleRate/rate;
+   if(!Number.isFinite(sampleRate)||sampleRate<=0)throw new Error("Voice model returned an invalid sample rate for dialogue "+item.index);
+   const offset=Math.max(0,Math.round(item.start/1000*rate));
+   if(offset>=mix.length)throw new Error("Dialogue "+item.index+" starts after the selected video's end. Correct its timestamp before generating audio.");
+   const ratio=sampleRate/rate;
    const length=Math.min(Math.ceil(audio.length/ratio),mix.length-offset);
-   for(let j=0;j<length;j++){const p=j*ratio,a=Math.floor(p),b=Math.min(a+1,audio.length-1),f=p-a;mix[offset+j]+=audio[a]*(1-f)+audio[b]*f;}
+   if(length<=0)throw new Error("No audio could be placed for dialogue "+item.index+". Check its timestamp and video duration.");
+   for(let j=0;j<length;j++){const p=j*ratio,a=Math.floor(p),b=Math.min(a+1,audio.length-1),f=p-a;const sample=audio[a]*(1-f)+audio[b]*f;if(Number.isFinite(sample))mix[offset+j]+=sample;}
   }
   for(let i=0;i<mix.length;i++)mix[i]=Math.max(-1,Math.min(1,mix[i]));
   const blob=wavBlob(mix,rate);if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);audioPlayer.src=outputUrl;audioPlayer.hidden=false;downloadLink.href=outputUrl;downloadLink.download="ASLAM-AI-dubbed-audio-"+lang+".wav";downloadLink.hidden=false;say("Dubbed audio generated with "+(engine==="supertonic"?"Supertonic 3 ("+supertonicBackend+")":"MMS")+". Review voice assignments, timing and sound before rendering MP4.");
