@@ -11,7 +11,7 @@ load.addEventListener("click",async()=>{
  if(window.aslamReleaseTTS)await window.aslamReleaseTTS();else window.dispatchEvent(new Event("aslam:release-tts"));
  loading=true;window.aslamASRLoading=true;load.disabled=true;say("Loading browser AI runtime…");
  try{
-  const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2");
+  const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
   env.allowLocalModels=false;env.useBrowserCache=true;
   transcriber=await pipeline("automatic-speech-recognition","Xenova/whisper-tiny",{dtype:"q8",progress_callback:p=>{
    if(p?.status==="progress"&&Number.isFinite(p.progress))say("Downloading Whisper model: "+Math.round(p.progress)+"%. First download may be large.");
