@@ -20,7 +20,7 @@ async function loadOrtRuntime(){
  if(window.ort)return window.ort;
  if(!ortScriptPromise)ortScriptPromise=new Promise((resolve,reject)=>{
   const script=document.createElement("script");
-  script.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js";
+  script.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.webgpu.min.js";
   script.crossOrigin="anonymous";
   script.onload=()=>window.ort?resolve(window.ort):reject(new Error("ONNX Runtime Web loaded without its global API."));
   script.onerror=()=>reject(new Error("Could not download ONNX Runtime Web."));
