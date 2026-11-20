@@ -107,6 +107,8 @@ if "detected.split(\"-\")[0].toLowerCase()" not in translation_source or "tags[b
 asr_source = (ROOT.parent / "asr.js").read_text(encoding="utf-8")
 if "rms<0.001" not in asr_source or "Math.min(span,rawStart)" not in asr_source or "Math.min(span,rawEnd)" not in asr_source:
     raise SystemExit("ASR must skip silent audio segments and clamp Whisper timestamps to each segment.")
+if "video.addEventListener(\"seeked\",begin)" not in asr_source or "if(!video.seeking&&video.readyState>=2)begin()" not in asr_source:
+    raise SystemExit("ASR must wait for video seeking to finish before capturing each audio segment.")
 for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-worker.js", "ffmpeg-constants.js", "ffmpeg-errors.js", "supertonic-helper.js"):
     module_path = ROOT.parent / module_name
     if not module_path.exists():
