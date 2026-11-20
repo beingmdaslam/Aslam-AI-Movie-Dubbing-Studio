@@ -87,12 +87,23 @@ try{
  const savedSrt=await readFile(srtPath,"utf8");
  if(!savedSrt.startsWith("\uFEFF")||!savedSrt.includes("Second line")||!savedSrt.includes("First line"))throw new Error("SRT download did not contain UTF-8 BOM and both translated lines.");
 
+ await page.locator("#outputQuality").selectOption("1080");
+ await page.locator("#audioMixMode").selectOption("mix");
+ await page.locator("#embedSubtitles").check();
  const downloadPromise=page.waitForEvent("download");
  await page.locator("#saveProject").click();
  const projectDownload=await downloadPromise;
  const projectPath=await projectDownload.path();
  const savedProject=JSON.parse(await readFile(projectPath,"utf8"));
  if(savedProject.entries.length!==2||savedProject.entries.some(e=>e.speaker!=="Hero"||e.voice!=="F3"))throw new Error("Saved project did not preserve speaker/voice assignments: "+JSON.stringify(savedProject.entries));
+ if(savedProject.quality!=="1080"||savedProject.audioMixMode!=="mix"||savedProject.embedSubtitles!==true)throw new Error("Saved project did not preserve MP4 export settings: "+JSON.stringify(savedProject));
+ await page.locator("#outputQuality").selectOption("original");
+ await page.locator("#audioMixMode").selectOption("replace");
+ await page.locator("#embedSubtitles").uncheck();
+ await page.locator("#projectFile").setInputFiles({name:"saved-settings.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(savedProject))});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 2 dialogue lines"),null,{timeout:10000});
+ const restoredExportSettings=await page.evaluate(()=>({quality:document.querySelector("#outputQuality").value,mix:document.querySelector("#audioMixMode").value,embed:document.querySelector("#embedSubtitles").checked}));
+ if(restoredExportSettings.quality!=="1080"||restoredExportSettings.mix!=="mix"||!restoredExportSettings.embed)throw new Error("Loading a project did not restore MP4 export settings: "+JSON.stringify(restoredExportSettings));
  const rtlProject={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"ar",entries:[{start:"00:00:01,000",end:"00:00:02,000",source:"Hello",translated:"مرحبا",speaker:"Hero",voice:"F3"}]};
  await page.locator("#projectFile").setInputFiles({name:"rtl-project.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(rtlProject))});
  await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
