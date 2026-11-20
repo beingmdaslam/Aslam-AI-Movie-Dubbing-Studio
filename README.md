@@ -1,6 +1,6 @@
 # ASLAM AI Movie Dubbing Studio
 
-A free, local-first movie analysis and subtitle workflow. The website is the launcher; video processing runs on your own Windows computer so it does not require a paid cloud AI API.
+A zero-cost project with a phone-only browser subtitle editor and an optional local-computer AI processing workflow. No paid API is required by the current documented features.
 
 ## Phone-only, zero-cost mode
 
@@ -34,7 +34,7 @@ Requirements: Windows, Python 3.11, internet for first-time package/model downlo
 6. Open `http://127.0.0.1:8765/studio` on that same computer.
 7. On first use, select a video up to 1 GB. The first transcription and translation runs may download model files and take time.
 
-The main website's **START AI DUBBING** button opens `http://127.0.0.1:8765/studio`. If you use the hosted website from a different device, the local worker must be running on the same device as the browser; `127.0.0.1` always means the device currently opening the link.
+The hosted dashboard now opens `mobile-studio.html`, which does not require the local worker. The local worker is an optional separate workflow and is not required for phone-only subtitle editing.
 
 ## Checks and troubleshooting
 
