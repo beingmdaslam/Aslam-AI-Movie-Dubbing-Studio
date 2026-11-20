@@ -92,7 +92,7 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
 
 
 sw_source = (ROOT.parent / "sw.js").read_text(encoding="utf-8")
-if "aslam-ai-mobile-v29" not in sw_source:
+if "aslam-ai-mobile-v30" not in sw_source:
     raise SystemExit("PWA cache version must be refreshed after mobile studio changes.")
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
 for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", "allowedVoices=new Set", "e.source.length>10000", "e.translated.length>10000", "maxDialogueLines=1000", "p.entries.length>maxDialogueLines", "applySubtitleDirection();status.textContent=\"Loaded \""):
@@ -158,6 +158,8 @@ if 'Number.isFinite(sample)' not in tts_source:
     raise SystemExit("TTS must prevent non-finite model samples from corrupting the WAV output.")
 if 'releaseSupertonic().catch(()=>{})' not in tts_source:
     raise SystemExit("Supertonic memory should be released when switching to an unsupported language.")
+if "window.aslamOriginalVideoName=saved.name||\"video.mp4\"" not in mobile_source or "window.aslamOriginalVideoName||\"video.mp4\"" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
+    raise SystemExit("Mobile render must preserve the original filename after dashboard handoff.")
 if "dist/esm" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg module worker must load the ESM core.")
 
