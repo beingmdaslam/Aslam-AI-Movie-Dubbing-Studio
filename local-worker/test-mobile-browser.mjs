@@ -63,18 +63,18 @@ try{
  const savedSrt=await readFile(srtPath,"utf8");
  if(!savedSrt.startsWith("\uFEFF")||!savedSrt.includes("Second line")||!savedSrt.includes("First line"))throw new Error("SRT download did not contain UTF-8 BOM and both translated lines.");
 
- const rtlProject={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"ar",entries:[{start:"00:00:01,000",end:"00:00:02,000",source:"Hello",translated:"مرحبا",speaker:"Hero",voice:"F3"}]};
- await page.locator("#projectFile").setInputFiles({name:"rtl-project.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(rtlProject))});
- await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
- const rtlState=await page.evaluate(()=>({caption:document.querySelector("#captionPreview").dir,text:document.querySelector(".translated").dir,align:document.querySelector(".translated").style.textAlign,target:document.querySelector("#targetLanguage").value}));
- if(rtlState.caption!=="rtl"||rtlState.text!=="rtl"||rtlState.align!=="right"||rtlState.target!=="ar")throw new Error("Loading an Arabic project did not restore RTL subtitle direction: "+JSON.stringify(rtlState));
- await page.locator("#targetLanguage").selectOption("hi");
  const downloadPromise=page.waitForEvent("download");
  await page.locator("#saveProject").click();
  const projectDownload=await downloadPromise;
  const projectPath=await projectDownload.path();
  const savedProject=JSON.parse(await readFile(projectPath,"utf8"));
  if(savedProject.entries.length!==2||savedProject.entries.some(e=>e.speaker!=="Hero"||e.voice!=="F3"))throw new Error("Saved project did not preserve speaker/voice assignments: "+JSON.stringify(savedProject.entries));
+ const rtlProject={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"ar",entries:[{start:"00:00:01,000",end:"00:00:02,000",source:"Hello",translated:"مرحبا",speaker:"Hero",voice:"F3"}]};
+ await page.locator("#projectFile").setInputFiles({name:"rtl-project.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(rtlProject))});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
+ const rtlState=await page.evaluate(()=>({caption:document.querySelector("#captionPreview").dir,text:document.querySelector(".translated").dir,align:document.querySelector(".translated").style.textAlign,target:document.querySelector("#targetLanguage").value}));
+ if(rtlState.caption!=="rtl"||rtlState.text!=="rtl"||rtlState.align!=="right"||rtlState.target!=="ar")throw new Error("Loading an Arabic project did not restore RTL subtitle direction: "+JSON.stringify(rtlState));
+ await page.locator("#targetLanguage").selectOption("hi");
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
   const put=(o,t)=>{for(let i=0;i<t.length;i++)view.setUint8(o+i,t.charCodeAt(i));};
