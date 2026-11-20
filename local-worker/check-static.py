@@ -138,6 +138,8 @@ if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_sou
     raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if 'const maxDuration=engine==="supertonic"?300:900' not in tts_source:
     raise SystemExit("Supertonic phone-memory duration limit is missing.")
+if 'x.end>duration*1000+250' not in tts_source:
+    raise SystemExit("TTS must reject dialogue ending beyond the selected video's duration.")
 if 'Number.isFinite(sampleRate)||sampleRate<=0' not in tts_source or 'offset>=mix.length' not in tts_source:
     raise SystemExit("TTS must reject invalid sample rates and dialogue timestamps beyond the video duration.")
 if 'Number.isFinite(sample)' not in tts_source:
