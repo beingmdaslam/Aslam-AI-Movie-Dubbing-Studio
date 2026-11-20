@@ -92,15 +92,23 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
 
 
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
-for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
+for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="ttsEngine"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
-for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-worker.js", "ffmpeg-constants.js", "ffmpeg-errors.js"):
+for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-worker.js", "ffmpeg-constants.js", "ffmpeg-errors.js", "supertonic-helper.js"):
     module_path = ROOT.parent / module_name
     if not module_path.exists():
         raise SystemExit("Missing mobile processing module: " + module_name)
     subprocess.run([shutil.which("node") or "node", "--check", str(module_path)], check=True)
 
+
+
+if 'className="speakerVoice"' not in mobile_source or 'voice:c.querySelector(".speakerVoice")' not in mobile_source:
+    raise SystemExit("Per-character voice styles must be editable and saved in project JSON.")
+if 'supertonic-helper.js' not in (ROOT.parent / "sw.js").read_text(encoding="utf-8"):
+    raise SystemExit("PWA cache must include the optional Supertonic TTS helper.")
+if 'supertone-oss-archive/supertonic-3' not in (ROOT.parent / "tts.js").read_text(encoding="utf-8"):
+    raise SystemExit("Supertonic multilingual model source is not configured.")
 
 asr_source = (ROOT.parent / "asr.js").read_text(encoding="utf-8")
 if "window.addLine=addLine" not in mobile_source or "window.addLine(" not in asr_source:
