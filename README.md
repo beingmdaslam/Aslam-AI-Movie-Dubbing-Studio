@@ -6,7 +6,7 @@ A zero-cost project with a phone-only browser subtitle editor and an optional lo
 
 Open the hosted dashboard on your phone and choose **START AI DUBBING** to open `mobile-studio.html`. This browser-only mode can preview a locally selected video, import an existing SRT subtitle file, edit subtitle text and timestamps, preview subtitles synchronized over the video, sort entries, export an SRT file, and save/restore a complete subtitle project as JSON. When you choose a video on the dashboard and continue, the file is handed to the mobile editor using on-device IndexedDB when the browser permits it; the video is not uploaded to a server. If the browser storage quota is insufficient, select the video again inside the editor.
 
-This mode does not yet perform automatic speech recognition, automatic translation, generated speech, voice cloning, lip-sync, or final video rendering. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
+The mobile editor now includes an experimental on-device Whisper Tiny speech-to-text stage. The first use downloads the free model and browser runtime; speech recognition runs in the browser and the video is not uploaded. The browser captures and transcribes the selected video's audio in short segments. Performance and maximum practical video length depend on phone memory, browser support, and model download/cache availability. Review the generated text and timestamps. Automatic translation, generated speech, voice cloning, lip-sync, and final video rendering are not connected yet. It is a subtitle editing workflow, not a completed AI dubbing pipeline. Those AI stages need a genuine on-device model/runtime or a verified free compute service; do not enter paid API keys.
 
 The `local-worker/` folder remains available as an optional computer-based workflow. It is not required for the phone-only subtitle editor.
 
@@ -14,11 +14,11 @@ The `local-worker/` folder remains available as an optional computer-based workf
 
 1. Select a movie in the local studio.
 2. Transcribe dialogue and timestamps with faster-whisper.
-3. Group similar voices into speaker labels with SpeechBrain ECAPA (review is required; this is approximate).
-4. Install and use a free Argos Translate language model locally.
-5. Edit translated dialogue and speaker labels.
-6. Export an SRT subtitle file or burn subtitles into an MP4 with FFmpeg.
-7. Optionally run Wav2Lip with an existing dubbed audio track, if its separate model and compatible environment have been installed.
+3. Alternatively, use the phone editor's experimental local Whisper Tiny ASR to generate draft dialogue segments. This first-use model download requires internet and enough browser storage/RAM.\n4. Group similar voices into speaker labels with SpeechBrain ECAPA (review is required; this is approximate).
+5. Install and use a free Argos Translate language model locally.
+6. Edit translated dialogue and speaker labels.
+7. Export an SRT subtitle file or burn subtitles into an MP4 with FFmpeg.
+8. Optionally run Wav2Lip with an existing dubbed audio track, if its separate model and compatible environment have been installed.
 
 **Voice cloning is not part of the current guided workflow.** Wav2Lip only synchronizes mouth movement to audio you provide; it does not create speech. Use only audio you own or are authorized to use.
 
