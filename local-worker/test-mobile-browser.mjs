@@ -35,6 +35,33 @@ try{
  await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
  const sanitized=await page.locator("#lines > .line").first().evaluate(el=>({speaker:el.querySelector(".speaker").value,voice:el.querySelector(".speakerVoice").value}));
  if(sanitized.speaker.length!==40||sanitized.voice!=="M1")throw new Error("Project import did not sanitize speaker/voice fields: "+JSON.stringify(sanitized));
+
+ await page.evaluate(()=>document.querySelector("#lines").replaceChildren());
+ await page.locator("#addLine").click();
+ await page.locator("#addLine").click();
+ const dialogue=page.locator("#lines > .line");
+ await dialogue.nth(0).locator(".start").fill("00:00:04,000");
+ await dialogue.nth(0).locator(".end").fill("00:00:05,000");
+ await dialogue.nth(0).locator(".speaker").fill("Hero");
+ await dialogue.nth(0).locator(".translated").fill("First line");
+ await dialogue.nth(1).locator(".start").fill("00:00:01,000");
+ await dialogue.nth(1).locator(".end").fill("00:00:02,000");
+ await dialogue.nth(1).locator(".speaker").fill("Hero");
+ await dialogue.nth(1).locator(".translated").fill("Second line");
+ await dialogue.nth(1).locator(".speakerVoice").selectOption("F3");
+ const assignedVoices=await dialogue.evaluateAll(items=>items.map(el=>el.querySelector(".speakerVoice").value));
+ if(assignedVoices.some(v=>v!=="F3"))throw new Error("Changing one character voice did not update every matching speaker line: "+JSON.stringify(assignedVoices));
+ await page.locator("#sortLines").click();
+ const sortedStarts=await dialogue.evaluateAll(items=>items.map(el=>el.querySelector(".start").value));
+ if(sortedStarts[0]!=="00:00:01,000"||sortedStarts[1]!=="00:00:04,000")throw new Error("Dialogue sorting did not order entries by start time: "+JSON.stringify(sortedStarts));
+ const exportedSrt=await page.evaluate(()=>window.aslamBuildSrt());
+ if(!exportedSrt.includes("00:00:01,000 --> 00:00:02,000\\nSecond line")||!exportedSrt.includes("00:00:04,000 --> 00:00:05,000\\nFirst line"))throw new Error("SRT builder did not preserve sorted timestamps and translated text: "+exportedSrt);
+ const downloadPromise=page.waitForEvent("download");
+ await page.locator("#saveProject").click();
+ const projectDownload=await downloadPromise;
+ const projectPath=await projectDownload.path();
+ const savedProject=JSON.parse(await readFile(projectPath,"utf8"));
+ if(savedProject.entries.length!==2||savedProject.entries.some(e=>e.speaker!=="Hero"||e.voice!=="F3"))throw new Error("Saved project did not preserve speaker/voice assignments: "+JSON.stringify(savedProject.entries));
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
   const put=(o,t)=>{for(let i=0;i<t.length;i++)view.setUint8(o+i,t.charCodeAt(i));};
