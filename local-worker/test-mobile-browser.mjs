@@ -18,7 +18,8 @@ const server=createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(4173,"127.0.0.1",resolve));
 const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 try{
- const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+ const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+ const page=await context.newPage();
  const errors=[];
  page.on("pageerror",e=>errors.push(e.message));
  page.on("console",msg=>{if(msg.type()==="error")errors.push("console: "+msg.text());});
@@ -26,6 +27,20 @@ try{
  const mobileColumns=await page.locator(".grid").first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
  if(mobileColumns!==1)throw new Error("Mobile layout did not collapse the action grid to one column: "+mobileColumns);
  const videoBytes=await page.evaluate(async()=>{const canvas=document.createElement("canvas");canvas.width=640;canvas.height=360;const ctx=canvas.getContext("2d"),stream=canvas.captureStream(24),recorder=new MediaRecorder(stream,{mimeType:"video/webm;codecs=vp8"}),chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const stopped=new Promise(resolve=>recorder.onstop=resolve);recorder.start();for(let i=0;i<24;i++){ctx.fillStyle=i%2?"#101010":"#303030";ctx.fillRect(0,0,640,360);await new Promise(resolve=>requestAnimationFrame(resolve));}recorder.stop();await stopped;stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"video/webm"});return Array.from(new Uint8Array(await blob.arrayBuffer()));});
+ const dashboard=await context.newPage();
+ await dashboard.goto("http://127.0.0.1:4173/index.html",{waitUntil:"domcontentloaded"});
+ await dashboard.locator("#videoFile").setInputFiles({name:"handoff-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
+ await dashboard.locator("#sourceLanguage").selectOption("en");
+ await dashboard.locator("#targetLanguage").selectOption("ar");
+ await dashboard.locator("#quality").selectOption("720");
+ await dashboard.locator("#startButton").click();
+ await dashboard.waitForURL("**/mobile-studio.html",{timeout:15000});
+ await dashboard.waitForFunction(()=>document.querySelector("#status").textContent.includes("Video received from dashboard"),null,{timeout:15000});
+ const handoffState=await dashboard.evaluate(()=>({source:document.querySelector("#sourceLanguage").value,target:document.querySelector("#targetLanguage").value,quality:document.querySelector("#outputQuality").value,video:!!document.querySelector("#preview").src}));
+ if(handoffState.source!=="en"||handoffState.target!=="ar"||handoffState.quality!=="720"||!handoffState.video)throw new Error("Dashboard-to-mobile handoff did not preserve the video and settings: "+JSON.stringify(handoffState));
+ await dashboard.close();
+ await page.reload({waitUntil:"domcontentloaded"});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Video received from dashboard"),null,{timeout:15000});
  await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
  await page.waitForFunction(()=>document.querySelector("#videoFile").files.length===1,null,{timeout:10000});
  await page.locator("#srtFile").setInputFiles({name:"validation.srt",mimeType:"text/plain",buffer:Buffer.from("1\n00:00:00,000 --> 00:00:01,200\nValid subtitle\n\n2\n00:00:02,000 --> 00:00:01,000\nReversed timestamps\n\n3\nNo timestamp line\nIgnored line\n")});
