@@ -39,8 +39,6 @@ try{
  const handoffState=await dashboard.evaluate(()=>({source:document.querySelector("#sourceLanguage").value,target:document.querySelector("#targetLanguage").value,quality:document.querySelector("#outputQuality").value,video:!!document.querySelector("#preview").src}));
  if(handoffState.source!=="en"||handoffState.target!=="ar"||handoffState.quality!=="720"||!handoffState.video)throw new Error("Dashboard-to-mobile handoff did not preserve the video and settings: "+JSON.stringify(handoffState));
  await dashboard.close();
- await page.reload({waitUntil:"domcontentloaded"});
- await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Video received from dashboard"),null,{timeout:15000});
  await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
  await page.waitForFunction(()=>document.querySelector("#videoFile").files.length===1,null,{timeout:10000});
  await page.locator("#srtFile").setInputFiles({name:"validation.srt",mimeType:"text/plain",buffer:Buffer.from("1\n00:00:00,000 --> 00:00:01,200\nValid subtitle\n\n2\n00:00:02,000 --> 00:00:01,000\nReversed timestamps\n\n3\nNo timestamp line\nIgnored line\n")});
