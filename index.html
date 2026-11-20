@@ -290,9 +290,9 @@ preview.addEventListener("error", function() {
   videoInfo.textContent = t.failed;
 });
 
-/* Upload selected video to the existing private Cloudflare R2 bucket. */
-let uploadInProgress = false;
-startButton.addEventListener("click", async function() {
+/* Open the free local processing studio. The user selects the video again there;
+   browsers do not allow one page to transfer a local File object to another page. */
+startButton.addEventListener("click", function() {
   const t = translations[appLanguage.value] || translations.en;
   const file = fileInput.files && fileInput.files[0];
 
@@ -300,83 +300,17 @@ startButton.addEventListener("click", async function() {
     statusText.textContent = t.empty;
     return;
   }
-  if (uploadInProgress) return;
 
-  const extension = (file.name.split(".").pop() || "").toLowerCase();
-  const mimeFallback = {
-    mp4: "video/mp4", m4v: "video/x-m4v", mov: "video/quicktime",
-    mkv: "video/x-matroska", webm: "video/webm", avi: "video/x-msvideo"
-  };
-  const contentType = file.type && file.type.startsWith("video/")
-    ? file.type
-    : (mimeFallback[extension] || "");
-
-  if (!contentType) {
-    statusText.textContent = "Unsupported video format. Please choose MP4, MOV, MKV, WEBM or AVI.";
+  const studioWindow = window.open("http://127.0.0.1:8765/studio", "_blank");
+  if (!studioWindow) {
+    statusText.textContent = "Your browser blocked the new tab. Allow pop-ups for this site, then tap Start again.";
     return;
   }
 
-  uploadInProgress = true;
-  startButton.disabled = true;
-  startButton.textContent = "PREPARING SECURE UPLOAD…";
-  statusText.textContent = "Requesting a secure upload link…";
-
-  try {
-    const response = await fetch("/.netlify/functions/create-upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileName: file.name,
-        contentType,
-        fileSize: file.size
-      })
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.success || !data.uploadUrl || !data.key) {
-      throw new Error(data.error || "Could not prepare the secure upload.");
-    }
-
-    statusText.textContent = "Uploading video to secure storage…";
-    startButton.textContent = "UPLOADING 0%";
-
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", data.uploadUrl, true);
-      xhr.setRequestHeader("Content-Type", contentType);
-      xhr.upload.addEventListener("progress", event => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          startButton.textContent = "UPLOADING " + percent + "%";
-          statusText.textContent =
-            "Uploading: " + percent + "% (" +
-            (event.loaded / (1024 * 1024)).toFixed(1) + " / " +
-            (event.total / (1024 * 1024)).toFixed(1) + " MB)";
-        }
-      });
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve();
-        else reject(new Error("Storage upload failed (HTTP " + xhr.status + "). Check the R2 bucket CORS settings."));
-      });
-      xhr.addEventListener("error", () => reject(new Error("Network error during upload. Please retry on a stable connection.")));
-      xhr.addEventListener("abort", () => reject(new Error("Upload was cancelled.")));
-      xhr.send(file);
-    });
-
-    statusText.textContent =
-      "Upload complete. Storage key: " + data.key +
-      ". AI transcription, translation, voice cloning and lip-sync processing are not connected yet.";
-    startButton.textContent = "UPLOAD COMPLETE";
-  } catch (error) {
-    console.error("Video upload error:", error);
-    statusText.textContent = error.message || "Video upload failed. Please try again.";
-    startButton.textContent = t.start;
-  } finally {
-    uploadInProgress = false;
-    startButton.disabled = false;
-  }
+  statusText.textContent =
+    "Local studio opened. Select the same video again in the new tab. " +
+    "Keep the ASLAM AI worker running on the computer.";
 });
-
 window.addEventListener("beforeunload", function() {
   if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
 });
