@@ -1,14 +1,15 @@
 "use strict";
 const el=id=>document.getElementById(id);
 const load=el("loadAsr"),run=el("transcribeVideo"),status=el("asrStatus"),video=el("preview");
-let transcriber=null,loading=false,audioContext=null,mediaSource=null;
+let transcriber=null,loading=false,processing=false,audioContext=null,mediaSource=null;
 const languages={en:"english",hi:"hindi",ar:"arabic",ur:"urdu",fr:"french",es:"spanish",de:"german",tr:"turkish",pt:"portuguese",zh:"chinese",ja:"japanese"};
 function say(s){status.textContent=s;}
-window.addEventListener("aslam:release-asr",()=>{asrPipeline=null;transcribeButton.disabled=true;asrMessage("Whisper model released to free phone memory for another AI stage. Load it again when needed.");});
+window.addEventListener("aslam:release-asr",()=>{if(loading||processing){say("Finish the current speech task before loading another AI model.");return;}transcriber=null;run.disabled=true;if(audioContext){audioContext.close().catch(()=>{});audioContext=null;mediaSource=null;}say("Whisper model released to free phone memory for another AI stage. Load it again when needed.");});
 load.addEventListener("click",async()=>{
+ if(window.aslamTTSBusy||window.aslamTTSLoading){say("Finish the current voice task before loading Whisper.");return;}
  window.dispatchEvent(new Event("aslam:release-tts"));
  if(loading||transcriber)return;
- loading=true;load.disabled=true;say("Loading browser AI runtime…");
+ loading=true;window.aslamASRLoading=true;load.disabled=true;say("Loading browser AI runtime…");
  try{
   const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2");
   env.allowLocalModels=false;env.useBrowserCache=true;
@@ -18,7 +19,7 @@ load.addEventListener("click",async()=>{
   }});
   say("Whisper Tiny loaded. Ready to transcribe on this device.");run.disabled=false;
  }catch(e){say("Model load failed: "+(e?.message||"unknown error")+". Check internet, browser storage and retry.");}
- finally{loading=false;load.disabled=false;}
+ finally{loading=false;window.aslamASRLoading=false;load.disabled=false;}
 });
 function format(ms){const h=Math.floor(ms/3600000);ms%=3600000;const m=Math.floor(ms/60000);ms%=60000;const s=Math.floor(ms/1000),z=ms%1000;return [h,m,s].map(v=>String(v).padStart(2,"0")).join(":")+","+String(z).padStart(3,"0");}
 function resample(input,from,to=16000){
@@ -47,7 +48,7 @@ run.addEventListener("click",async()=>{
  if(!transcriber)return say("Load Whisper model first.");
  if(!video.src||!Number.isFinite(video.duration)||video.duration<=0)return say("Select a video with an audio track first.");
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return say("Web Audio is not supported in this browser.");
- run.disabled=true;load.disabled=true;
+ run.disabled=true;load.disabled=true;processing=true;window.aslamASRBusy=true;
  let ctx,src,node,gain,oldMuted=video.muted;
  try{
   ctx=audioContext||new AC();audioContext=ctx;await ctx.resume();src=mediaSource||ctx.createMediaElementSource(video);mediaSource=src;node=ctx.createScriptProcessor(4096,2,1);gain=ctx.createGain();gain.gain.value=0;src.connect(node);node.connect(gain);gain.connect(ctx.destination);video.muted=false;
@@ -69,5 +70,5 @@ run.addEventListener("click",async()=>{
   for(const item of found)window.addLine(format(Math.round(item.start*1000)),format(Math.round(item.end*1000)),item.text,"");
   say(found.length?"Transcription complete: "+found.length+" segments added. Review the text/timestamps, then export SRT.":"No speech was detected. Confirm this video has an audio track.");
  }catch(e){video.pause();say("Transcription failed: "+(e?.message||"unknown error")+". Long videos may exceed phone/browser memory.");}
- finally{video.muted=oldMuted;if(node){node.disconnect();node.onaudioprocess=null;}if(src)src.disconnect();if(gain)gain.disconnect();run.disabled=!transcriber;load.disabled=false;}
+ finally{video.muted=oldMuted;if(node){node.disconnect();node.onaudioprocess=null;}if(src)src.disconnect();if(gain)gain.disconnect();processing=false;window.aslamASRBusy=false;run.disabled=!transcriber;load.disabled=false;}
 });
