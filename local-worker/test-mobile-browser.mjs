@@ -4,8 +4,6 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 const root=process.cwd();
-const inputPath=process.argv[2];
-if(!inputPath)throw new Error("Usage: node local-worker/test-mobile-browser.mjs <test-video.mp4>");
 const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".svg":"image/svg+xml",".webmanifest":"application/manifest+json"};
 const server=createServer(async(req,res)=>{
  try{
@@ -25,7 +23,8 @@ try{
  page.on("pageerror",e=>errors.push(e.message));
  page.on("console",msg=>{if(msg.type()==="error")errors.push("console: "+msg.text());});
  await page.goto("http://127.0.0.1:4173/mobile-studio.html",{waitUntil:"domcontentloaded"});
- await page.locator("#videoFile").setInputFiles(inputPath);
+ const videoBytes=await page.evaluate(async()=>{const canvas=document.createElement("canvas");canvas.width=640;canvas.height=360;const ctx=canvas.getContext("2d"),stream=canvas.captureStream(24),recorder=new MediaRecorder(stream,{mimeType:"video/webm;codecs=vp8"}),chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const stopped=new Promise(resolve=>recorder.onstop=resolve);recorder.start();for(let i=0;i<24;i++){ctx.fillStyle=i%2?"#101010":"#303030";ctx.fillRect(0,0,640,360);await new Promise(resolve=>requestAnimationFrame(resolve));}recorder.stop();await stopped;stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"video/webm"});return Array.from(new Uint8Array(await blob.arrayBuffer()));});
+ await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
  await page.waitForFunction(()=>document.querySelector("#videoFile").files.length===1,null,{timeout:10000});
  await page.evaluate(()=>{
   const rate=16000,count=rate,buffer=new ArrayBuffer(44+count*2),view=new DataView(buffer);
