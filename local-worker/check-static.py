@@ -131,6 +131,8 @@ if 'ur:"payam1394/traxlate-mms-tts-urd"' not in tts_source or "@huggingface/tran
 if "ort.webgpu.min.js" not in tts_source or "supertonicLanguages" not in tts_source:
     raise SystemExit("Supertonic must use the WebGPU-capable ONNX Runtime bundle and language guard.")
 if 'const maxDuration=engine==="supertonic"?300:900' not in tts_source:
+if 'releaseSupertonic().catch(()=>{})' not in tts_source:
+    raise SystemExit("Supertonic memory should be released when switching to an unsupported language.")
     raise SystemExit("Supertonic phone-memory duration limit is missing.")
 if "dist/esm" not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
     raise SystemExit("FFmpeg module worker must load the ESM core.")
