@@ -2,9 +2,9 @@
 const $=id=>document.getElementById(id);
 const source=$("sourceLanguage"),target=$("targetLanguage"),status=$("translationStatus");
 const runAll=$("translateAll"),detect=$("detectSource");
-const tags={en:"en",hi:"hi",ar:"ar",ur:"ur",fr:"fr",es:"es",de:"de",tr:"tr",pt:"pt",zh:"zh",ja:"ja"};
+const tags={en:"en",hi:"hi",ar:"ar",ur:"ur",fr:"fr",es:"es",de:"de",tr:"tr",pt:"pt",zh:"zh",ja:"ja",ru:"ru"};
 const engines=new Map();
-const langName={en:"English",hi:"Hindi",ar:"Arabic",ur:"Urdu",fr:"French",es:"Spanish",de:"German",tr:"Turkish",pt:"Portuguese",zh:"Chinese",ja:"Japanese"};
+const langName={en:"English",hi:"Hindi",ar:"Arabic",ur:"Urdu",fr:"French",es:"Spanish",de:"German",tr:"Turkish",pt:"Portuguese",zh:"Chinese",ja:"Japanese",ru:"Russian"};
 function say(s){status.textContent=s;}
 async function getTranslator(src,dst){
  if(!("Translator" in self))throw new Error("This browser does not provide the built-in on-device Translator API. Try a supported Chrome version/device, or enter translations manually.");
