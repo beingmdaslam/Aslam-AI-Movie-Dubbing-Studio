@@ -47,6 +47,7 @@ function capture(context,node,start,duration){
 run.addEventListener("click",async()=>{
  if(!transcriber)return say("Load Whisper model first.");
  if(!video.src||!Number.isFinite(video.duration)||video.duration<=0)return say("Select a video with an audio track first.");
+ if(video.duration>900)return say("For phone memory and processing safety, Whisper is limited to 15 minutes per pass. Split longer videos into shorter parts.");
  const existing=[...document.querySelectorAll("#lines .line")];if(existing.some(card=>card.querySelector(".source").value.trim()||card.querySelector(".translated").value.trim()))return say("Remove or export existing dialogue lines before transcription to avoid duplicate entries.");existing.forEach(card=>card.remove());
  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return say("Web Audio is not supported in this browser.");
  run.disabled=true;load.disabled=true;processing=true;window.aslamASRBusy=true;
