@@ -37,6 +37,11 @@ try{
  await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Loaded 1 dialogue lines"),null,{timeout:10000});
  const sanitized=await page.locator("#lines > .line").first().evaluate(el=>({speaker:el.querySelector(".speaker").value,voice:el.querySelector(".speakerVoice").value}));
  if(sanitized.speaker.length!==40||sanitized.voice!=="M1")throw new Error("Project import did not sanitize speaker/voice fields: "+JSON.stringify(sanitized));
+ const invalidProject={format:"aslam-ai-subtitle-project",version:1,sourceLanguage:"en",targetLanguage:"hi",entries:[{start:"invalid",end:"00:00:02,000",source:"Bad",translated:"Bad",speaker:"Bad",voice:"M1"}]};
+ await page.locator("#projectFile").setInputFiles({name:"invalid-project.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(invalidProject))});
+ await page.waitForFunction(()=>document.querySelector("#status").textContent.includes("Could not load project"),null,{timeout:10000});
+ const preservedAfterRejectedImport=await page.locator("#lines > .line").count();
+ if(preservedAfterRejectedImport!==1||await page.locator(".speaker").inputValue()!=="S".repeat(40))throw new Error("Rejected project import damaged the existing dialogue state.");
 
  await page.evaluate(()=>document.querySelector("#lines").replaceChildren());
  await page.locator("#addLine").click();
