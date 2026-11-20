@@ -28,8 +28,9 @@ loadButton.addEventListener("click",async()=>{
 $("targetLanguage").addEventListener("change",()=>{if(loadedLanguage&&loadedLanguage!==$("targetLanguage").value){synthesizer=null;loadedLanguage=null;generateButton.disabled=true;say("Target language changed. Load the matching voice model.");}});
 generateButton.addEventListener("click",async()=>{
  if(!synthesizer||loadedLanguage!==$("targetLanguage").value){say("Load the matching voice model first.");return;}
- const entries=[...$("lines").children].map((card,i)=>({start:window.aslamToMs(card.querySelector(".start").value),text:card.querySelector(".translated").value.trim()||card.querySelector(".source").value.trim(),index:i+1})).filter(x=>x.text);
+ const entries=[...$("lines").children].map((card,i)=>({start:window.aslamToMs(card.querySelector(".start").value),end:window.aslamToMs(card.querySelector(".end").value),text:card.querySelector(".translated").value.trim()||card.querySelector(".source").value.trim(),index:i+1})).filter(x=>x.text);
  if(!entries.length){say("No dialogue text to speak. Transcribe or enter dialogue first.");return;}
+ const invalid=entries.find(x=>x.start===null||x.end===null||x.end<=x.start);if(invalid){say("Dialogue "+invalid.index+" has invalid timestamps. Set a valid start and an end time after it.");return;}
  const duration=Number.isFinite($("preview").duration)?$("preview").duration:Math.max(...entries.map(x=>x.start/1000))+120;
  if(duration>900){say("For phone memory safety, dubbed audio export is limited to 15 minutes per pass.");return;}
  busy=true;generateButton.disabled=true;loadButton.disabled=true;
