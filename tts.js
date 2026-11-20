@@ -13,17 +13,18 @@ function wavBlob(samples,sampleRate){
  return new Blob([buffer],{type:"audio/wav"});
 }
 loadButton.addEventListener("click",async()=>{
+ if(window.aslamASRBusy||window.aslamASRLoading){say("Finish speech transcription before loading the voice model.");return;}
  window.dispatchEvent(new Event("aslam:release-asr"));
  const lang=$("targetLanguage").value,model=models[lang];
  if(!model){say("No bundled local TTS model for "+lang+". Choose Hindi, Arabic, English, French, Spanish, German, Portuguese or Russian.");return;}
- if(busy)return;busy=true;loadButton.disabled=true;generateButton.disabled=true;
+ if(busy)return;busy=true;window.aslamTTSLoading=true;loadButton.disabled=true;generateButton.disabled=true;
  try{
   say("Loading local voice model for "+lang+"… First download may be large. The model runs on this phone.");
   const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2");
   synthesizer=await pipeline("text-to-speech",model,{dtype:"q8",progress_callback:p=>{if(p?.status==="progress"&&Number.isFinite(p.progress))say("Downloading voice model: "+Math.round(p.progress)+"%");}});
   loadedLanguage=lang;say("Local voice model ready for "+lang+".");
  }catch(e){synthesizer=null;loadedLanguage=null;say("Voice model failed to load: "+(e?.message||"unknown error")+". Check connection, free storage and phone memory.");}
- finally{busy=false;loadButton.disabled=false;generateButton.disabled=!synthesizer;}
+ finally{busy=false;window.aslamTTSLoading=false;loadButton.disabled=false;generateButton.disabled=!synthesizer;}
 });
 $("targetLanguage").addEventListener("change",()=>{if(loadedLanguage&&loadedLanguage!==$("targetLanguage").value){synthesizer=null;loadedLanguage=null;generateButton.disabled=true;say("Target language changed. Load the matching voice model.");}});
 generateButton.addEventListener("click",async()=>{
@@ -33,7 +34,7 @@ generateButton.addEventListener("click",async()=>{
  const invalid=entries.find(x=>x.start===null||x.end===null||x.end<=x.start);if(invalid){say("Dialogue "+invalid.index+" has invalid timestamps. Set a valid start and an end time after it.");return;}
  const duration=Number.isFinite($("preview").duration)?$("preview").duration:Math.max(...entries.map(x=>x.start/1000))+120;
  if(duration>900){say("For phone memory safety, dubbed audio export is limited to 15 minutes per pass.");return;}
- busy=true;generateButton.disabled=true;loadButton.disabled=true;
+ busy=true;window.aslamTTSBusy=true;generateButton.disabled=true;loadButton.disabled=true;
  try{
   const rate=16000,total=Math.ceil(duration*rate),mix=new Float32Array(total);
   for(let i=0;i<entries.length;i++){
@@ -48,5 +49,5 @@ generateButton.addEventListener("click",async()=>{
   for(let i=0;i<mix.length;i++)mix[i]=Math.max(-1,Math.min(1,mix[i]));
   const blob=wavBlob(mix,rate);if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);audioPlayer.src=outputUrl;audioPlayer.hidden=false;downloadLink.href=outputUrl;downloadLink.download="ASLAM-AI-dubbed-audio-"+loadedLanguage+".wav";downloadLink.hidden=false;say("Dubbed audio generated. Listen and review sync/voice quality before using it with the video.");
  }catch(e){say("Voice generation failed: "+(e?.message||"unknown error")+". Try shorter dialogue or a device with more memory.");}
- finally{busy=false;generateButton.disabled=!synthesizer;loadButton.disabled=false;}
+ finally{busy=false;window.aslamTTSBusy=false;generateButton.disabled=!synthesizer;loadButton.disabled=false;}
 });
