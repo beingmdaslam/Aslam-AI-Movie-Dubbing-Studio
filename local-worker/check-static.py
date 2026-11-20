@@ -92,13 +92,17 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
 
 
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
-for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
+for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
-for module_name in ("asr.js", "translation.js", "tts.js", "render.js"):
+for module_name in ("asr.js", "translation.js", "tts.js", "render.js", "ffmpeg-worker.js", "ffmpeg-constants.js", "ffmpeg-errors.js"):
     module_path = ROOT.parent / module_name
     if not module_path.exists():
         raise SystemExit("Missing mobile processing module: " + module_name)
     subprocess.run([shutil.which("node") or "node", "--check", str(module_path)], check=True)
 
-print("Static checks passed: Python syntax, both HTML pages, JavaScript syntax, local workflow routes and no R2 upload call.")
+if 'classWorkerURL:new URL("/ffmpeg-worker.js"' not in (ROOT.parent / "render.js").read_text(encoding="utf-8"):
+    raise SystemExit("FFmpeg renderer must use the same-origin worker.")
+if not all(path in (ROOT.parent / "sw.js").read_text(encoding="utf-8") for path in ("/ffmpeg-worker.js", "/ffmpeg-constants.js", "/ffmpeg-errors.js")):
+    raise SystemExit("PWA cache must include the same-origin FFmpeg worker files.")
+print("Static checks passed: Python syntax, all HTML and JavaScript modules, mobile controls, FFmpeg worker, local routes and no R2 upload call.")
