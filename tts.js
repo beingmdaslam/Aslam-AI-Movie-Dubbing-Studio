@@ -1,7 +1,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const loadButton=$("loadTts"),generateButton=$("generateDub"),status=$("ttsStatus"),audioPlayer=$("dubPreview"),downloadLink=$("downloadDub");
-const mmsModels={hi:"Xenova/mms-tts-hin",ar:"Xenova/mms-tts-ara",en:"Xenova/mms-tts-eng",fr:"Xenova/mms-tts-fra",es:"Xenova/mms-tts-spa",de:"Xenova/mms-tts-deu",pt:"Xenova/mms-tts-por",ru:"Xenova/mms-tts-rus"};
+const mmsModels={hi:"Xenova/mms-tts-hin",ar:"Xenova/mms-tts-ara",en:"Xenova/mms-tts-eng",fr:"Xenova/mms-tts-fra",es:"Xenova/mms-tts-spa",de:"Xenova/mms-tts-deu",pt:"Xenova/mms-tts-por",ru:"Xenova/mms-tts-rus",ur:"payam1394/traxlate-mms-tts-urd"};
 const supertonicLanguages=new Set(["en","ko","ja","ar","bg","cs","da","de","el","es","et","fi","fr","hi","hr","hu","id","it","lt","lv","nl","pl","pt","ro","ru","sk","sl","sv","tr","uk","vi"]);
 const supertonicRevision="aafc6e32416a594460b32413efc49d7fe4ce6d46";
 const supertonicRoot="https://huggingface.co/supertone-oss-archive/supertonic-3/resolve/"+supertonicRevision;
@@ -91,7 +91,7 @@ loadButton.addEventListener("click",async()=>{
   }else{
    await releaseSupertonic();
    say("Loading local MMS voice model for "+lang+"… First download may be large. This model is for non-commercial use only.");
-   const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2");
+   const {pipeline}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
    synthesizer=await pipeline("text-to-speech",mmsModels[lang],{dtype:"q8",progress_callback:p=>{if(p?.status==="progress"&&Number.isFinite(p.progress))say("Downloading MMS voice model: "+Math.round(p.progress)+"%");}});
    loadedLanguage=lang;loadedEngine=engine;say("Local MMS voice model ready for "+lang+". It uses one voice style for all speakers.");
   }
