@@ -101,6 +101,10 @@ for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", 
 for required_ui in ('id="transcribeVideo"', 'id="translateAll"', 'id="loadTts"', 'id="generateDub"', 'id="renderMp4"', 'id="outputQuality"', 'id="ttsEngine"', 'id="exportSrt"', 'id="saveProject"', 'speakerInput.className="speaker"'):
     if required_ui not in mobile_source:
         raise SystemExit("Missing mobile workflow control: " + required_ui)
+if 'quality:$("outputQuality").value' not in mobile_source or 'audioMixMode:$("audioMixMode").value' not in mobile_source or 'embedSubtitles:$("embedSubtitles").checked' not in mobile_source:
+    raise SystemExit("Subtitle projects must save MP4 export settings.")
+if 'typeof p.embedSubtitles==="boolean"' not in mobile_source or 'p.quality&&[...$("outputQuality").options].some(o=>o.value===p.quality)' not in mobile_source:
+    raise SystemExit("Subtitle projects must safely restore MP4 export settings.")
 translation_source = (ROOT.parent / "translation.js").read_text(encoding="utf-8")
 if "detected.split(\"-\")[0].toLowerCase()" not in translation_source or "tags[base]" not in translation_source:
     raise SystemExit("Translation language detection must normalize regional language codes.")
