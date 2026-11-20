@@ -78,6 +78,7 @@ loadButton.addEventListener("click",async()=>{
  if(window.aslamASRBusy||window.aslamASRLoading){say("Finish speech transcription before loading the voice model.");return;}
  if(busy)return;
  const engine=$("ttsEngine").value,lang=$("targetLanguage").value;
+ if(loadedEngine===engine&&loadedLanguage&&(engine==="supertonic"?!!supertonic:!!synthesizer)){say("The selected local voice model is already loaded.");return;}
  if(engine==="mms"&&!mmsModels[lang]){say("No MMS voice model is available for "+lang+". Select another language or use Supertonic 3 if it supports your language.");return;}
  if(engine==="supertonic"&&!supertonicLanguages.has(lang)){say("Supertonic 3 does not support "+lang+". Use MMS where available or choose one of its 31 supported languages.");return;}
  if(engine==="supertonic"&&!window.confirm("Supertonic 3 downloads about 400 MB of model files on first use. It runs on this phone and provides 10 preset voice styles. Continue?"))return;
