@@ -31,7 +31,9 @@ function capture(context,node,start,duration){
  const target=Math.ceil(duration*context.sampleRate);
  return new Promise((resolve,reject)=>{
   let blocks=[],count=0,done=false;
-  const finish=()=>{if(done)return;done=true;video.pause();node.onaudioprocess=null;const data=new Float32Array(count);let offset=0;for(const b of blocks){const n=Math.min(b.length,count-offset);data.set(b.subarray(0,n),offset);offset+=n;if(offset===count)break;}resolve(data);};
+  const cleanup=()=>{node.onaudioprocess=null;video.removeEventListener("seeked",begin);video.removeEventListener("error",fail);};
+  const finish=()=>{if(done)return;done=true;video.pause();cleanup();const data=new Float32Array(count);let offset=0;for(const b of blocks){const n=Math.min(b.length,count-offset);data.set(b.subarray(0,n),offset);offset+=n;if(offset===count)break;}resolve(data);};
+  const fail=()=>{if(done)return;done=true;video.pause();cleanup();reject(new Error("Could not seek or read the selected video's audio."));};
   node.onaudioprocess=e=>{
    const input=e.inputBuffer,n=Math.min(input.length,target-count),mono=new Float32Array(n);
    for(let ch=0;ch<input.numberOfChannels;ch++){const d=input.getChannelData(ch);for(let i=0;i<n;i++)mono[i]+=d[i]/input.numberOfChannels;}
@@ -39,9 +41,12 @@ function capture(context,node,start,duration){
    for(let ch=0;ch<e.outputBuffer.numberOfChannels;ch++)e.outputBuffer.getChannelData(ch).fill(0);
    if(count>=target||video.ended)finish();
   };
-  const begin=()=>video.play().catch(reject);
+  const begin=()=>{if(done||video.seeking)return;video.play().catch(fail);};
+  video.addEventListener("seeked",begin);
+  video.addEventListener("error",fail,{once:true});
+  video.pause();
   video.currentTime=start;
-  if(video.readyState>=2)begin();else video.addEventListener("seeked",begin,{once:true});
+  if(!video.seeking&&video.readyState>=2)begin();
  });
 }
 run.addEventListener("click",async()=>{
