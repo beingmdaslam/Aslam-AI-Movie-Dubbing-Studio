@@ -59,12 +59,15 @@ async function releaseSupertonic(){
  }
  supertonic=null;supertonicHelper=null;voiceCache.clear();supertonicBackend="";
 }
-window.addEventListener("aslam:release-tts",()=>{
- if(busy)return;
+async function releaseTTSForOtherStage(){
+ if(busy)return false;
  synthesizer=null;loadedLanguage=null;loadedEngine=null;generateButton.disabled=true;
- releaseSupertonic().catch(()=>{});
+ await releaseSupertonic();
  say("Voice model released to free phone memory for another AI stage. Load it again when needed.");
-});
+ return true;
+}
+window.aslamReleaseTTS=releaseTTSForOtherStage;
+window.addEventListener("aslam:release-tts",()=>{releaseTTSForOtherStage().catch(()=>{});});
 $("ttsEngine").addEventListener("change",()=>{
  if(busy)return;
  synthesizer=null;loadedLanguage=null;loadedEngine=null;generateButton.disabled=true;
