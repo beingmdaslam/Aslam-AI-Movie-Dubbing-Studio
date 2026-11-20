@@ -80,3 +80,8 @@ See [local-worker/README.md](local-worker/README.md) for detailed API routes, in
 - It first tries to copy the original video codec; if that cannot be muxed into MP4, it tries H.264 re-encoding.
 - The video is not uploaded to a server. The browser needs substantial memory and storage; long or high-resolution videos may fail on phones. Resolution changes re-encode video and may take much longer than keeping the original codec.
 - You can replace the original audio or mix it quietly (20%) under the generated dubbing. Lip-sync is not included.
+
+
+## Third-party licenses
+
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the browser runtimes, FFmpeg components, and AI model license notices. Review model restrictions before commercial use or redistribution.
