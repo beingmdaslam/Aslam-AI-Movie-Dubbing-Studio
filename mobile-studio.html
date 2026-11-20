@@ -15,6 +15,22 @@ let videoUrl=null;
 function applySubtitleDirection(){const rtl=["ar","ur","fa","he"].includes($("targetLanguage").value);caption.dir=rtl?"rtl":"ltr";[...lines.querySelectorAll(".translated")].forEach(el=>{el.dir=rtl?"rtl":"ltr";el.style.textAlign=rtl?"right":"left";});}
 $("targetLanguage").addEventListener("change",applySubtitleDirection);
 fileInput.addEventListener("change",()=>{const f=fileInput.files&&fileInput.files[0];if(!f)return;if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=URL.createObjectURL(f);preview.src=videoUrl;preview.hidden=false;preview.load();status.textContent="Video selected: "+f.name;});
+async function restoreDashboardVideo(){
+ if(!("indexedDB" in window)){status.textContent="Select your video here. This browser does not support local video handoff.";return;}
+ let db;
+ try{
+  db=await new Promise((resolve,reject)=>{const req=indexedDB.open("aslam-ai-studio",1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("handoff"))req.result.createObjectStore("handoff");};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
+  const saved=await new Promise((resolve,reject)=>{const tx=db.transaction("handoff","readonly"),req=tx.objectStore("handoff").get("selected-video");req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
+  if(!saved||!saved.blob)return;
+  if(videoUrl)URL.revokeObjectURL(videoUrl);
+  videoUrl=URL.createObjectURL(saved.blob);
+  preview.src=videoUrl;preview.hidden=false;preview.load();
+  status.textContent="Video received from dashboard: "+(saved.name||"selected video")+". It stayed on this device.";
+  const tx=db.transaction("handoff","readwrite");tx.objectStore("handoff").delete("selected-video");
+ }catch(error){status.textContent="Could not restore the dashboard video. Please select it here. Your video has not been uploaded.";}
+ finally{if(db)db.close();}
+}
+restoreDashboardVideo();
 function addLine(start="00:00:00,000",end="00:00:03,000",source="",translated=""){
  const card=document.createElement("div");card.className="line";
  const head=document.createElement("div");head.className="linehead";const title=document.createElement("strong");
