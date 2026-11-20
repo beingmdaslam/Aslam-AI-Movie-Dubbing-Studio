@@ -1,5 +1,5 @@
-const CACHE_NAME = "aslam-ai-mobile-v3";
-const APP_SHELL = ["/", "/index.html", "/mobile-studio.html", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "aslam-ai-mobile-v4";
+const APP_SHELL = ["/", "/index.html", "/mobile-studio.html", "/asr.js", "/manifest.webmanifest", "/icon.svg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
