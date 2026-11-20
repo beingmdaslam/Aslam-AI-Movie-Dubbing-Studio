@@ -56,6 +56,12 @@ try{
  if(sortedStarts[0]!=="00:00:01,000"||sortedStarts[1]!=="00:00:04,000")throw new Error("Dialogue sorting did not order entries by start time: "+JSON.stringify(sortedStarts));
  const exportedSrt=await page.evaluate(()=>window.aslamBuildSrt());
  if(!exportedSrt.includes("00:00:01,000 --> 00:00:02,000\nSecond line")||!exportedSrt.includes("00:00:04,000 --> 00:00:05,000\nFirst line"))throw new Error("SRT builder did not preserve sorted timestamps and translated text: "+exportedSrt);
+ const srtDownloadPromise=page.waitForEvent("download");
+ await page.locator("#exportSrt").click();
+ const srtDownload=await srtDownloadPromise;
+ const srtPath=await srtDownload.path();
+ const savedSrt=await readFile(srtPath,"utf8");
+ if(!savedSrt.startsWith("\\uFEFF")||!savedSrt.includes("Second line")||!savedSrt.includes("First line"))throw new Error("SRT download did not contain UTF-8 BOM and both translated lines.");
  const downloadPromise=page.waitForEvent("download");
  await page.locator("#saveProject").click();
  const projectDownload=await downloadPromise;
