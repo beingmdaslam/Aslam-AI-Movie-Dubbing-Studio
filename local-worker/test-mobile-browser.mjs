@@ -61,7 +61,7 @@ try{
  const srtDownload=await srtDownloadPromise;
  const srtPath=await srtDownload.path();
  const savedSrt=await readFile(srtPath,"utf8");
- if(!savedSrt.startsWith("\\uFEFF")||!savedSrt.includes("Second line")||!savedSrt.includes("First line"))throw new Error("SRT download did not contain UTF-8 BOM and both translated lines.");
+ if(!savedSrt.startsWith("\uFEFF")||!savedSrt.includes("Second line")||!savedSrt.includes("First line"))throw new Error("SRT download did not contain UTF-8 BOM and both translated lines.");
  const downloadPromise=page.waitForEvent("download");
  await page.locator("#saveProject").click();
  const projectDownload=await downloadPromise;
