@@ -23,7 +23,7 @@ try{
  page.on("pageerror",e=>errors.push(e.message));
  page.on("console",msg=>{if(msg.type()==="error")errors.push("console: "+msg.text());});
  await page.goto("http://127.0.0.1:4173/mobile-studio.html",{waitUntil:"domcontentloaded"});
- const mobileColumns=await page.locator(".grid").first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\\s+/).length);
+ const mobileColumns=await page.locator(".grid").first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
  if(mobileColumns!==1)throw new Error("Mobile layout did not collapse the action grid to one column: "+mobileColumns);
  const videoBytes=await page.evaluate(async()=>{const canvas=document.createElement("canvas");canvas.width=640;canvas.height=360;const ctx=canvas.getContext("2d"),stream=canvas.captureStream(24),recorder=new MediaRecorder(stream,{mimeType:"video/webm;codecs=vp8"}),chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const stopped=new Promise(resolve=>recorder.onstop=resolve);recorder.start();for(let i=0;i<24;i++){ctx.fillStyle=i%2?"#101010":"#303030";ctx.fillRect(0,0,640,360);await new Promise(resolve=>requestAnimationFrame(resolve));}recorder.stop();await stopped;stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:"video/webm"});return Array.from(new Uint8Array(await blob.arrayBuffer()));});
  await page.locator("#videoFile").setInputFiles({name:"aslam-test.webm",mimeType:"video/webm",buffer:Buffer.from(videoBytes)});
