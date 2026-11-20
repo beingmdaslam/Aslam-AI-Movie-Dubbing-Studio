@@ -91,6 +91,9 @@ if "import torch, torchvision, cv2, librosa, numpy" not in wav_helper:
     raise SystemExit("Wav2Lip configuration must verify its separate runtime dependencies.")
 
 
+sw_source = (ROOT.parent / "sw.js").read_text(encoding="utf-8")
+if "aslam-ai-mobile-v25" not in sw_source:
+    raise SystemExit("PWA cache version must be refreshed after mobile studio changes.")
 mobile_source = (ROOT.parent / "mobile-studio.html").read_text(encoding="utf-8")
 for safety_check in ("10*1024*1024", "20*1024*1024", "invalid entries skipped", "allowedVoices=new Set", "e.source.length>10000", "e.translated.length>10000", "maxDialogueLines=1000", "p.entries.length>maxDialogueLines", "applySubtitleDirection();status.textContent=\"Loaded \""):
     if safety_check not in mobile_source:
