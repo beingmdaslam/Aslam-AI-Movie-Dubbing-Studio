@@ -25,14 +25,19 @@ button.addEventListener("click",async()=>{
   const ext=(originalName.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"");
   const inputName="source."+ext,outputName="aslam-ai-dubbed.mp4";
   await ffmpeg.writeFile(inputName,videoBytes);await ffmpeg.writeFile("dubbed.wav",audioBytes);
-  say("Replacing original audio with the generated dubbed WAV. Video is processed on this device…");
-  let code=await ffmpeg.exec(["-i",inputName,"-i","dubbed.wav","-map","0:v:0","-map","1:a:0","-c:v","copy","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName]);
-  if(code!==0){say("Copying the original video codec did not work. Trying H.264 re-encoding…");code=await ffmpeg.exec(["-i",inputName,"-i","dubbed.wav","-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","160k","-movflags","+faststart","-shortest",outputName]);}
+  const embed=$("embedSubtitles").checked&&typeof window.aslamBuildSrt==="function",srt=embed?window.aslamBuildSrt():"";
+  if(srt.trim())await ffmpeg.writeFile("subtitles.srt",new TextEncoder().encode(srt));
+  const inputs=srt.trim()?["-i",inputName,"-i","dubbed.wav","-i","subtitles.srt"]:["-i",inputName,"-i","dubbed.wav"];
+  const maps=srt.trim()?["-map","0:v:0","-map","1:a:0","-map","2:s:0","-c:s","mov_text"]:["-map","0:v:0","-map","1:a:0"];
+  say("Replacing original audio"+(srt.trim()?" and embedding selectable subtitles":"")+" in the MP4 locally…");
+  let args=[...inputs,...maps,"-c:v","copy","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",outputName];
+  let code=await ffmpeg.exec(args);
+  if(code!==0){say("Trying H.264 re-encoding for MP4 compatibility…");args=[...inputs,...maps,"-c:v","libx264","-preset","ultrafast","-crf","28","-c:a","aac","-b:a","160k","-movflags","+faststart","-shortest",outputName];code=await ffmpeg.exec(args);}
   if(code!==0)throw new Error("FFmpeg exited with code "+code);
   const data=await ffmpeg.readFile(outputName),blob=new Blob([data],{type:"video/mp4"});
   if(resultUrl)URL.revokeObjectURL(resultUrl);resultUrl=URL.createObjectURL(blob);player.src=resultUrl;player.hidden=false;download.href=resultUrl;download.download="ASLAM-AI-Dubbed.mp4";download.hidden=false;
   say("MP4 rendered successfully in this browser. Original video track retained; audio replaced by generated dubbing. Review synchronization and sound before publishing.");
-  for(const name of [inputName,"dubbed.wav",outputName])await ffmpeg.deleteFile(name).catch(()=>{});
+  for(const name of [inputName,"dubbed.wav","subtitles.srt",outputName])await ffmpeg.deleteFile(name).catch(()=>{});
  }catch(e){say("MP4 render failed: "+(e?.message||"unknown error")+". This operation needs substantial free RAM/storage; try a shorter or smaller video. The original files remain unchanged.");}
  finally{loading=false;button.disabled=false;}
 });
